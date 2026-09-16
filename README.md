@@ -44,6 +44,7 @@ AI explanations do not control the pass/fail decision. Passing a gate would indi
 ```text
 .
 ├── README.md                 # Project entry point
+├── CodeSentinel_README.md    # Detailed design and implementation stages
 └── LICENSE                  # MIT license
 ```
 
