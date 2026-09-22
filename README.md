@@ -1,71 +1,114 @@
 # CodeSentinel
 
-An architecture proposal for an AI-aware CI/CD quality gate: deterministic checks decide whether a change passes; AI-assisted feedback explains the evidence.
+CodeSentinel is an AI-aware quality-gate project whose first working component is a local-first static security scanner. The shipped MVP includes a browser dashboard, a command-line interface, a reusable scanning engine, twelve explainable security rules, a deliberately vulnerable sample project, and automated tests.
 
-> **Status: design-stage project.** This repository contains documentation and a license, not an executable validation engine. CI integration, runtime isolation, reporting, and AI feedback are planned, not shipped features.
+No source code is uploaded and no third-party package is required.
 
-## Problem and approach
+## Implementation status
 
-AI-assisted code still needs tests, security review, build checks, and runtime verification. CodeSentinel proposes a common reporting layer around those checks so developers can understand failures before merge or deployment. It evaluates code, not whether a human or model wrote it.
+The repository originally described a broader CI/CD quality gate. The current implementation covers the local security-analysis portion of that design; it does not claim that every planned stage is complete.
 
-## Proposed architecture
+| Original capability | Current status | Evidence |
+| --- | --- | --- |
+| Local validation | **Partially implemented** | Security rules, structured findings, scoring, JSON output, and reliable CLI exit codes |
+| CI integration | **Planned** | The CLI is CI-compatible, but a checked-in GitHub Actions workflow and evidence artifact publishing are not included yet |
+| Runtime validation | **Planned** | Isolated build, startup, health, and API smoke checks are not included yet |
+| AI feedback | **Planned** | Findings use deterministic explanations; no source or report data is sent to an AI service |
+| Deployment protection | **Planned** | Staging checks, deployment health gates, and rollback signals are not included yet |
 
-This diagram describes the intended design, not currently running infrastructure.
+The deterministic scanner—not an AI model—decides the current pass/fail exit status. A clean scan reduces known pattern-based risk but does not prove that an application is secure.
 
-```mermaid
-flowchart TD
-    PR["Code change / pull request"] --> Runner["Validation runner - planned"]
-    Runner --> Checks["Deterministic checks: lint, types, tests, security"]
-    Runner --> Runtime["Isolated build and runtime checks"]
-    Checks --> Report["Structured evidence report"]
-    Runtime --> Report
-    Report --> Policy{"Required checks pass?"}
-    Policy -->|No| Block["Fail quality gate"]
-    Policy -->|Yes| Pass["Pass quality gate"]
-    Report -. "Relevant failures only" .-> AI["AI explanation - advisory"]
-    AI --> Feedback["Developer feedback"]
-    Block --> Feedback
+## Quick start
+
+Requirements: Node.js 18 or newer.
+
+```powershell
+git clone https://github.com/Hrithik028/CodeSentinel.git
+cd CodeSentinel
+npm start
 ```
 
-AI explanations do not control the pass/fail decision. Passing a gate would indicate only that configured checks passed, not prove complete correctness or security.
+Open `http://127.0.0.1:4173`, keep the default `samples/vulnerable-app` path, and select **Run security scan**.
 
-## Planned capabilities
+To use the CLI:
 
-| Area | Intended responsibility |
-| --- | --- |
-| Local validation | Run checks and normalize exit codes, findings, and logs |
-| CI integration | Publish a summary and expose a required status check |
-| Runtime validation | Build and smoke-test an application in isolation |
-| AI feedback | Explain failures without overriding results |
-| Deployment protection | Apply staging and health checks before release |
+```powershell
+npm run scan -- samples/vulnerable-app
+```
 
-## Repository layout
+For machine-readable output:
+
+```powershell
+npm run scan -- samples/vulnerable-app --json
+```
+
+The CLI exits with code `0` when no high or critical finding exists, `1` for high findings, `2` for critical findings, and `3` when the scan cannot run. This makes it usable in a CI pipeline.
+
+## What it detects
+
+| Rule | Detection | Severity |
+| --- | --- | --- |
+| SEC001 | Possible hard-coded secret | Critical |
+| SEC002 | Dynamic code execution | Critical |
+| SEC003 | Shell command execution | High |
+| SEC004 | SQL built with string interpolation | High |
+| SEC005 | Weak password hashing | High |
+| SEC006 | Unsafe HTML assignment | High |
+| SEC007 | Permissive CORS | Medium |
+| SEC008 | Insecure HTTP endpoint | Medium |
+| SEC009 | Debug mode enabled | Medium |
+| SEC010 | TLS verification disabled | Critical |
+| SEC011 | Potential path traversal | High |
+| SEC012 | Sensitive data written to logs | Medium |
+
+## Project structure
 
 ```text
-.
-├── README.md                 # Project entry point
-├── CodeSentinel_README.md    # Detailed design and implementation stages
-└── LICENSE                  # MIT license
+CodeSentinel/
+├── public/                  # Dashboard HTML, CSS, and browser JavaScript
+├── samples/vulnerable-app/  # Safe, deliberately vulnerable demonstration files
+├── src/
+│   ├── cli.js               # Terminal interface
+│   ├── rules.js             # Security rule catalogue
+│   ├── scanner.js           # File discovery, analysis, scoring, and reports
+│   └── server.js            # HTTP API and static file server
+├── test/scanner.test.js     # Automated scanner tests
+└── package.json
 ```
 
-Read the [detailed design](CodeSentinel_README.md) for result classifications and proposed integration workflows. There are no installation commands, package manifests, tests, or application screenshots to provide yet.
+## How the scan works
 
-## Implementation roadmap
+1. The scanner recursively discovers files while ignoring dependencies, version-control data, build output, virtual environments, symbolic links, and files larger than 1 MB.
+2. It reads supported text files and evaluates only rules that apply to each file extension.
+3. Each match becomes a finding with severity, file, line, column, explanation, remediation, and a stable fingerprint. Suspected secret values are redacted in the report.
+4. The report is sorted by urgency. The score starts at 100 and subtracts 20 points for critical, 10 for high, 5 for medium, and 2 for low findings, with a minimum of zero.
 
-1. Define the result schema and implement a local runner with reliable exit status.
-2. Integrate the runner with GitHub Actions and publish evidence artifacts.
-3. Add isolated startup, health, and API smoke checks.
-4. Add optional AI explanations with explicit data-sharing controls.
-5. Introduce deployment checks and rollback signals.
+## Commands
 
-These are proposed stages, not completed milestones.
+```powershell
+npm start       # Run the dashboard
+npm run dev     # Run with automatic restart when server files change
+npm test        # Run automated tests
+npm run check   # Syntax-check every JavaScript entry point
+npm run scan -- <folder> [--json]
+```
 
-## Validation and safety
+## Security boundaries
 
-An initial acceptance case should introduce a reproducible failure, detect it, return a failing status with evidence, and pass only after correction. No such test run is included yet.
+The dashboard deliberately accepts only folders inside the CodeSentinel project. It also caps request bodies, skips symbolic links and large files, binds to localhost by default, sends a strict Content Security Policy, redacts detected secrets, and never sends scanned content to another service.
 
-Untrusted changes must not execute with production secrets or deployment permissions. Runtime isolation and restricted credentials are requirements still needing implementation and verification. Human review remains necessary.
+## Important limitation
+
+CodeSentinel is an educational static-analysis MVP. Pattern matching can produce false positives and false negatives. Treat its report as an early warning system—not a replacement for dependency scanning, dynamic testing, threat modelling, penetration testing, or expert code review.
+
+## Roadmap
+
+1. Add a configurable runner that normalizes lint, type-check, test, build, and security evidence.
+2. Add a GitHub Actions integration that publishes the structured report as a build artifact and job summary.
+3. Add isolated application startup, health, and API smoke checks with restricted credentials.
+4. Add optional AI explanations with explicit opt-in and data-sharing controls; AI output remains advisory.
+5. Add deployment health gates and provider-neutral rollback signals.
 
 ## License
 
-[MIT](LICENSE).
+MIT

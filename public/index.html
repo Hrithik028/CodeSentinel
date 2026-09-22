@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CodeSentinel is a local-first static security scanner for source code.">
+    <title>CodeSentinel — Local code security scanner</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="background-grid" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="CodeSentinel home">
+        <span class="brand-mark" aria-hidden="true"><span></span></span>
+        <span>Code<span>Sentinel</span></span>
+      </a>
+      <div class="status"><i></i> Engine online</div>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="eyebrow"><span>LOCAL-FIRST</span> STATIC ANALYSIS</div>
+        <h1>Find the risk.<br><em>Ship with confidence.</em></h1>
+        <p>Scan source code for exposed secrets, injection risks, unsafe configuration, and vulnerable patterns—without uploading a single file.</p>
+
+        <form class="scan-box" id="scan-form">
+          <label for="scan-path">Project folder inside CodeSentinel</label>
+          <div class="scan-row">
+            <div class="input-wrap">
+              <span aria-hidden="true">~/</span>
+              <input id="scan-path" name="path" value="samples/vulnerable-app" autocomplete="off" spellcheck="false">
+            </div>
+            <button type="submit" id="scan-button">
+              <span class="button-label">Run security scan</span>
+              <span class="button-arrow" aria-hidden="true">↗</span>
+            </button>
+          </div>
+          <p class="form-hint">Try the included sample first, then copy a project folder into CodeSentinel.</p>
+        </form>
+
+        <div class="trust-row" aria-label="Scanner properties">
+          <span><i>01</i> Nothing uploaded</span>
+          <span><i>02</i> 12 security rules</span>
+          <span><i>03</i> Actionable fixes</span>
+        </div>
+      </section>
+
+      <section class="results-section" id="results" hidden aria-live="polite">
+        <div class="section-heading">
+          <div>
+            <p class="kicker">SCAN REPORT</p>
+            <h2 id="report-title">Security posture</h2>
+          </div>
+          <p id="report-meta"></p>
+        </div>
+
+        <div class="summary-grid">
+          <article class="score-card">
+            <div class="score-ring" id="score-ring">
+              <div><strong id="score-value">—</strong><span>/100</span></div>
+            </div>
+            <div>
+              <p>Security score</p>
+              <h3 id="score-label">Awaiting scan</h3>
+              <span id="score-copy">Run a scan to assess this project.</span>
+            </div>
+          </article>
+          <article class="metric-card critical"><span>Critical</span><strong id="critical-count">0</strong><i></i></article>
+          <article class="metric-card high"><span>High</span><strong id="high-count">0</strong><i></i></article>
+          <article class="metric-card medium"><span>Medium</span><strong id="medium-count">0</strong><i></i></article>
+        </div>
+
+        <div class="findings-toolbar">
+          <h3>Findings <span id="finding-count">0</span></h3>
+          <div class="filters" role="group" aria-label="Filter findings">
+            <button class="filter active" data-filter="all">All</button>
+            <button class="filter" data-filter="critical">Critical</button>
+            <button class="filter" data-filter="high">High</button>
+            <button class="filter" data-filter="medium">Medium</button>
+          </div>
+        </div>
+        <div class="findings" id="findings-list"></div>
+      </section>
+
+      <section class="how-it-works">
+        <div>
+          <p class="kicker">HOW IT WORKS</p>
+          <h2>A focused first line of defence.</h2>
+        </div>
+        <div class="steps">
+          <article><span>01</span><h3>Discover</h3><p>CodeSentinel walks supported source files while skipping dependencies, builds, binaries, and oversized files.</p></article>
+          <article><span>02</span><h3>Analyse</h3><p>Twelve explainable rules inspect code for secrets, injection, transport, data exposure, and unsafe configuration.</p></article>
+          <article><span>03</span><h3>Remediate</h3><p>Every finding includes its exact location, why it matters, and a concrete direction for fixing the risk.</p></article>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"><span></span></span><span>Code<span>Sentinel</span></span></a>
+      <p>Built for developers who want security feedback before deployment.</p>
+      <span>v1.0.0</span>
+    </footer>
+
+    <template id="finding-template">
+      <article class="finding-card">
+        <button class="finding-summary" type="button" aria-expanded="false">
+          <span class="severity-badge"></span>
+          <span class="finding-main"><strong></strong><small></small></span>
+          <span class="finding-location"></span>
+          <span class="chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div class="finding-detail">
+          <div><span>Why it matters</span><p class="finding-message"></p></div>
+          <div><span>Recommended fix</span><p class="finding-fix"></p></div>
+          <pre><code></code></pre>
+        </div>
+      </article>
+    </template>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
