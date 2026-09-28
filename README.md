@@ -93,6 +93,18 @@ npm run check   # Syntax-check every JavaScript entry point
 npm run scan -- <folder> [--json]
 ```
 
+## WorkflowHQ development linking
+
+CodeSentinel is connected to the `CODE` project in WorkflowHQ. Include an exact
+WorkflowHQ issue key in branch names, commit messages, and pull-request titles so
+verified GitHub activity is linked to the correct ticket.
+
+```text
+Branch: CODE-76-test-pr
+Commit: CODE-76 Verify GitHub activity synchronization
+Pull request: CODE-76 Verify GitHub pull-request synchronization
+```
+
 ## Security boundaries
 
 The dashboard deliberately accepts only folders inside the CodeSentinel project. It also caps request bodies, skips symbolic links and large files, binds to localhost by default, sends a strict Content Security Policy, redacts detected secrets, and never sends scanned content to another service.
