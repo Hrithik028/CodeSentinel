@@ -142,3 +142,13 @@ test('the LLM prompt never contains the raw secret', async () => {
   await createSuggestFix({ canComment: async () => true, store, readIssue: async () => issueFrom(leaky), addComment: async () => {}, llm: async (m) => { prompt = JSON.stringify(m); return 'ok'; } })('SEC-1');
   assert.ok(!prompt.includes('hunter2'));
 });
+
+test('openIssues still counts issues whose Done transition failed', async () => {
+  const { store } = await seeded();
+  const before = (await getSecurityPosture(store, {})).projects[0].openIssues;
+  const jira = fakeJira();
+  jira.transitionToDone = async () => false;
+  await processReport({ ...fixture('scan-a.json'), findings: [] }, REPO, { source: 'ci', store, jira });
+  assert.ok(before > 0);
+  assert.equal((await getSecurityPosture(store, {})).projects[0].openIssues, before);
+});

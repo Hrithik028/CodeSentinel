@@ -13,6 +13,8 @@ async function linkedProjects(store, { projectKey, canBrowse }) {
 
 export async function getSecurityPosture(store, { projectKey, canBrowse = async () => true } = {}) {
   const projects = [];
+  // Count tracking records, not latest-scan findings: issues whose Done transition failed stay open.
+  const records = await store.allFingerprintRecords();
   for (const repo of await linkedProjects(store, { projectKey, canBrowse })) {
     const scan = await store.getLatestScan(repo.projectKey);
     projects.push({
@@ -21,7 +23,7 @@ export async function getSecurityPosture(store, { projectKey, canBrowse = async 
       score: scan?.summary?.score ?? null,
       grade: scan?.summary?.grade ?? null,
       severityCounts: scan?.summary?.severityCounts ?? null,
-      openIssues: scan ? scan.findings.filter((finding) => finding.issueKey).length : 0,
+      openIssues: records.filter((record) => record.status === 'open' && record.issueKey && record.projectKey === repo.projectKey && record.repoUrl === repo.repoUrl).length,
       source: scan?.source ?? null,
       scannedAt: scan?.receivedAt ?? null,
       commit: scan?.commit ?? null,
