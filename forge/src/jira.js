@@ -52,7 +52,10 @@ export async function addComment(issueKey, text) {
   });
 }
 
+// Returns true when transitioned, 'already-done' when the issue is already in a Done category, false otherwise.
 export async function transitionToDone(issueKey) {
+  const issue = await requestJson('getIssueStatus', route`/rest/api/3/issue/${issueKey}?fields=status`);
+  if (issue.fields?.status?.statusCategory?.key === 'done') return 'already-done';
   const { transitions = [] } = await requestJson('getTransitions', route`/rest/api/3/issue/${issueKey}/transitions`);
   const done = transitions.find((transition) => transition.to?.statusCategory?.key === 'done');
   if (!done) return false;
