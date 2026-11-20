@@ -97,7 +97,6 @@ test('saving without issueType keeps the stored issue type', async () => {
   assert.equal(stored.issueType, 'Vulnerability');
   assert.equal(stored.llmOptIn, true);
 });
-||||||| a5e3384
 
 test('a case-only repo edit keeps the PAT reachable', async () => {
   const { store, resolvers } = await setup();
