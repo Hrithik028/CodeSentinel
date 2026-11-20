@@ -3,7 +3,7 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { scanDirectory } from '../src/scanner.js';
+import { scanContent, scanDirectory, scannableExtensions } from '../src/scanner.js';
 
 async function withFixture(files, callback) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'codesentinel-'));
@@ -59,4 +59,19 @@ test('produces a perfect score for a clean project', async () => {
     assert.equal(report.summary.score, 100);
     assert.equal(report.summary.grade, 'A');
   });
+});
+
+test('scanContent is usable on in-memory content', () => {
+  const findings = scanContent(`const value = eval(input);`, 'src/app.js', '.js');
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0].ruleId, 'SEC002');
+  assert.equal(findings[0].file, 'src/app.js');
+  assert.match(findings[0].fingerprint, /^[0-9a-f]{16}$/);
+});
+
+test('scannableExtensions lists every rule extension', () => {
+  const extensions = scannableExtensions();
+  assert.ok(extensions.has('.js'));
+  assert.ok(extensions.has('.py'));
+  assert.ok(!extensions.has('.txt'));
 });

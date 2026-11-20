@@ -69,10 +69,12 @@ CodeSentinel/
 ├── samples/vulnerable-app/  # Safe, deliberately vulnerable demonstration files
 ├── src/
 │   ├── cli.js               # Terminal interface
+│   ├── ingest.js            # Pure report diffing and Jira issue payloads (shared with Forge)
 │   ├── rules.js             # Security rule catalogue
 │   ├── scanner.js           # File discovery, analysis, scoring, and reports
-│   └── server.js            # HTTP API and static file server
-├── test/scanner.test.js     # Automated scanner tests
+│   ├── server.js            # HTTP API and static file server
+│   └── store/fileStore.js   # JSON file-backed store (same interface as the Forge store)
+├── test/                    # Automated tests and report fixtures
 └── package.json
 ```
 
@@ -108,6 +110,18 @@ Branch: CODE-76-test-pr
 Commit: CODE-76 Verify GitHub activity synchronization
 Pull request: CODE-76 Verify GitHub pull-request synchronization
 ```
+
+## Shared core for the Jira (Forge) integration
+
+`src/ingest.js` is pure (no I/O) and is copied into the Forge app unchanged:
+
+- `diffReports(previousFingerprints, report)` returns `{ toCreate, toResolve, unchanged }`. Only `critical` and `high` findings (`ISSUE_SEVERITIES`) become issues.
+- `buildIssuePayload(finding)` builds the Jira summary, description (ending in `codesentinel-fp:<fingerprint>`) and labels `codesentinel`, `sec-<ruleId>`, `sev-<severity>`.
+- `summarizeDelta(previousReport, report)` reports score, severity and fingerprint changes between two scans.
+
+Fingerprints include the line number, so moving a finding to another line resolves the old issue and opens a new one.
+
+`src/scanner.js` also exports `scanContent(content, relativePath, extension)` for in-memory content and `scannableExtensions()`.
 
 ## Security boundaries
 
