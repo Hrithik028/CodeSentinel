@@ -78,7 +78,7 @@ The PAT is kept in KVS secret storage (`pat:{repoUrl}`) and sent only as the `Au
 
 ## Custom UI
 
-`static/ui` is a single Vite + React + Atlaskit bundle that serves the project page (`config-page`) and the dashboard gadget, including its edit view. It routes on `view.getContext()`. Build it before `forge deploy` with `npm run build:ui`; `predeploy` runs this automatically. `static/ui/build` is git-ignored.
+`static/ui` is a single Vite + React + Atlaskit bundle that serves the project page (`config-page`) and the dashboard gadget, including its edit view. It routes on `view.getContext()`. Deploy with `npm run deploy`, which builds the bundle and then runs `forge deploy`. If you call `forge deploy` directly, run `npm run build:ui` first. `static/ui/build` is git-ignored.
 
 - **Config page** (project admins only):
   - Repo URL is validated client- and server-side.

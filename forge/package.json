@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "build:ui": "npm --prefix static/ui ci && npm --prefix static/ui run build",
-    "predeploy": "npm run build:ui",
+    "deploy": "npm run build:ui && forge deploy",
     "lint": "forge lint",
     "test": "node --test test/"
   },
