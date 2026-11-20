@@ -1,10 +1,11 @@
 import { AccessError, createConfigService } from './configService.js';
+import { generateToken, hashToken } from './repos.js';
 
 const RUNNING = 'running';
 
 // Custom UI resolver definitions for the config page and the gadget. Dependencies are injected:
-// store, queue ({ push }), canAdminister(projectKey), canBrowse(projectKey), ingestUrl().
-export function createResolvers({ store, queue, canAdminister, canBrowse, ingestUrl }) {
+// store, queue ({ push }), canAdminister(projectKey), canBrowse(projectKey), canAdministerJira(), ingestUrl(), mcpUrl().
+export function createResolvers({ store, queue, canAdminister, canBrowse, canAdministerJira = async () => false, ingestUrl, mcpUrl = async () => null }) {
   const config = createConfigService({ store });
 
   const projectFrom = (payload, context) => payload?.projectKey ?? context?.extension?.project?.key;
@@ -30,10 +31,12 @@ export function createResolvers({ store, queue, canAdminister, canBrowse, ingest
     async getConfig({ payload, context }) {
       const projectKey = await requireAdmin(payload, context);
       const repo = await config.getProjectConfig(projectKey);
+      const mcp = await store.getConfig('mcp');
       return {
         projectKey,
         repo,
         ingestUrl: await ingestUrl(),
+        mcp: { url: await mcpUrl(), enabled: Boolean(mcp?.tokenHash), createdAt: mcp?.createdAt ?? null, canManage: await canAdministerJira() },
         scan: repo ? await scanStatus(repo.repoUrl) : null
       };
     },
@@ -86,6 +89,20 @@ export function createResolvers({ store, queue, canAdminister, canBrowse, ingest
       const visible = [];
       for (const repo of repos) if (await canBrowse(repo.projectKey)) visible.push({ projectKey: repo.projectKey, repoUrl: repo.repoUrl });
       return visible;
+    },
+
+    // The MCP token reads posture for every linked project, so only Jira admins can issue or revoke it.
+    async rotateMcpToken() {
+      if (!(await canAdministerJira())) throw new AccessError('Only Jira administrators can manage MCP access.');
+      const mcpToken = generateToken();
+      await store.setConfig('mcp', { tokenHash: hashToken(mcpToken), createdAt: new Date().toISOString() });
+      return { mcpToken };
+    },
+
+    async revokeMcpToken() {
+      if (!(await canAdministerJira())) throw new AccessError('Only Jira administrators can manage MCP access.');
+      await store.setConfig('mcp', null);
+      return { ok: true };
     },
 
     requireBrowse

@@ -27,7 +27,7 @@ modules:
   jira:issueAction:
     - key: suggest-fix
       title: Suggest fix
-      resource: suggest-fix
+      resource: main
       resolver:
         function: suggest-fix-fn
   scheduledTrigger:
@@ -102,8 +102,6 @@ modules:
 resources:
   - key: main
     path: static/ui/build
-  - key: suggest-fix
-    path: static/suggest-fix/build
 app:
   id: ari:cloud:ecosystem::app/00000000-0000-0000-0000-000000000000
   runtime:

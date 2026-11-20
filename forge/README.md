@@ -90,3 +90,14 @@ The PAT is kept in KVS secret storage (`pat:{repoUrl}`) and sent only as the `Au
   - Delta vs. the previous scan.
   - A sortable findings table linking to Jira issues.
   - Loading, empty, unconfigured, and error states.
+
+## Bonus modules
+
+- **Rovo** (`get-security-posture`, `list-open-findings`, agent `codesentinel-agent`): reads stored scans through `src/posture.js`. Results are filtered to the projects the calling user can browse.
+- **MCP** (`mcp-trigger`): JSON-RPC 2.0 over HTTP POST, protocol `2025-06-18`. Supports `initialize`, `ping`, `tools/list` and `tools/call` with `get_security_posture` and `list_open_findings`. It authenticates with `Authorization: Bearer <MCP token>`. A Jira admin generates the token on the CodeSentinel page; only its hash is stored, in `config:mcp`. See `docs/spec/mcp-tools.md`.
+- **Suggest fix** (issue action): reads the issue as the user and requires the project's `llmOptIn`. It sends only the rule metadata and the one-line excerpt, re-redacted by `redactForLlm`, to an OpenAI-compatible endpoint. The suggestion is added as a comment starting with `AI-generated suggestion (advisory only)`. Configure it with:
+  ```bash
+  forge variables set --encrypt LLM_API_KEY <key>
+  forge variables set LLM_MODEL gpt-4o-mini          # optional
+  forge variables set LLM_BASE_URL https://api.openai.com/v1   # optional; host must be in manifest egress
+  ```
