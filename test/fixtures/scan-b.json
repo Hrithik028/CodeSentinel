@@ -1,0 +1,117 @@
+{
+  "meta": {
+    "target": "vulnerable-app",
+    "scannedAt": "2026-11-21T00:00:00.000Z",
+    "durationMs": 5,
+    "scannedFiles": 2,
+    "scannedBytes": 800,
+    "skippedFiles": 0,
+    "hitFileLimit": false,
+    "ruleCount": 12
+  },
+  "summary": {
+    "score": 45,
+    "grade": "F",
+    "totalFindings": 7,
+    "severityCounts": {
+      "critical": 0,
+      "high": 4,
+      "medium": 3,
+      "low": 0
+    }
+  },
+  "findings": [
+    {
+      "fingerprint": "1931ac06927d28aa",
+      "ruleId": "SEC006",
+      "title": "Unsafe HTML assignment",
+      "severity": "high",
+      "category": "Cross-site scripting",
+      "file": "client.js",
+      "line": 2,
+      "column": 37,
+      "excerpt": "document.querySelector('#welcome').innerHTML = name;",
+      "message": "Writing arbitrary HTML can execute attacker-controlled scripts in the browser.",
+      "remediation": "Use textContent for plain text or sanitize trusted markup with a maintained allow-list sanitizer."
+    },
+    {
+      "fingerprint": "dc0ac80e34cece3f",
+      "ruleId": "SEC004",
+      "title": "SQL query built with string interpolation",
+      "severity": "high",
+      "category": "Injection",
+      "file": "server.js",
+      "line": 9,
+      "column": 26,
+      "excerpt": "return database.query(`SELECT * FROM users WHERE name = '${name}'`);",
+      "message": "Building SQL with values embedded in a string can create a SQL injection vulnerability.",
+      "remediation": "Use parameterised queries or prepared statements and pass data separately from SQL text."
+    },
+    {
+      "fingerprint": "bb7043af30e25be1",
+      "ruleId": "SEC003",
+      "title": "Shell command execution",
+      "severity": "high",
+      "category": "Injection",
+      "file": "server.js",
+      "line": 14,
+      "column": 3,
+      "excerpt": "exec(`ping ${host}`, () => {});",
+      "message": "Shell execution becomes dangerous when any argument can contain user-controlled data.",
+      "remediation": "Prefer execFile/spawn with a fixed executable and validated argument array; never concatenate untrusted input."
+    },
+    {
+      "fingerprint": "9c912bdee56aa30b",
+      "ruleId": "SEC005",
+      "title": "Weak password hashing algorithm",
+      "severity": "high",
+      "category": "Cryptography",
+      "file": "server.js",
+      "line": 18,
+      "column": 17,
+      "excerpt": "return crypto.createHash('md5').update(password).digest('hex');",
+      "message": "MD5 and SHA-1 are too fast and collision-prone for password storage.",
+      "remediation": "Use Argon2id, scrypt, or bcrypt with an appropriate work factor and a unique salt."
+    },
+    {
+      "fingerprint": "0c3e4c0baada8153",
+      "ruleId": "SEC008",
+      "title": "Insecure HTTP endpoint",
+      "severity": "medium",
+      "category": "Transport security",
+      "file": "client.js",
+      "line": 6,
+      "column": 33,
+      "excerpt": "const response = await fetch('http://api.example.com/profile');",
+      "message": "Plain HTTP can expose data to interception or modification in transit.",
+      "remediation": "Use HTTPS and validate the remote certificate. Redirect public HTTP traffic to HTTPS."
+    },
+    {
+      "fingerprint": "27813f06006fc8dc",
+      "ruleId": "SEC009",
+      "title": "Debug mode enabled",
+      "severity": "medium",
+      "category": "Configuration",
+      "file": "server.js",
+      "line": 6,
+      "column": 7,
+      "excerpt": "const debug = true;",
+      "message": "Debug mode may reveal stack traces, environment details, or privileged developer endpoints.",
+      "remediation": "Disable debug mode in deployed environments and keep detailed errors in protected logs."
+    },
+    {
+      "fingerprint": "21d16f4cba9b51bc",
+      "ruleId": "SEC012",
+      "title": "Sensitive data written to logs",
+      "severity": "medium",
+      "category": "Data exposure",
+      "file": "server.js",
+      "line": 21,
+      "column": 1,
+      "excerpt": "console.log('token', apiKey);",
+      "message": "Logs may retain sensitive values longer than the application and expose them to more people.",
+      "remediation": "Remove the sensitive field or log only a redacted identifier with structured access controls."
+    }
+  ],
+  "skipped": []
+}

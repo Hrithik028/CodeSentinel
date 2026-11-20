@@ -11,6 +11,10 @@ const IGNORED_DIRECTORIES = new Set([
 const MAX_FILE_BYTES = 1024 * 1024;
 const MAX_FILES = 5000;
 
+export function scannableExtensions() {
+  return new Set(RULES.flatMap((rule) => rule.extensions));
+}
+
 function lineDetails(content, index) {
   const before = content.slice(0, index);
   const line = before.split('\n').length;
@@ -61,7 +65,7 @@ async function collectFiles(rootPath) {
   return { files, skipped, hitFileLimit: files.length >= MAX_FILES };
 }
 
-function scanContent(content, relativePath, extension) {
+export function scanContent(content, relativePath, extension) {
   const findings = [];
 
   for (const rule of RULES) {
