@@ -6,27 +6,30 @@ import { createIngestHandler } from './ingestHandler.js';
 import { createForgeStore } from './store/forgeStore.js';
 import { jiraClient } from './jira.js';
 import { createResolvers } from './resolvers.js';
-import { canAdminister, canBrowse } from './permissions.js';
+import { canAdminister, canAdministerJira, canBrowse } from './permissions.js';
 import { createGitHubClient } from './github.js';
 import { runScanStep } from './scan.js';
+import { createMcpHandler } from './mcpHandler.js';
+import { getSecurityPosture, listOpenFindings } from './posture.js';
+import { createLlmClient, createSuggestFix } from './suggestFix.js';
+import { addComment } from './jira.js';
+import { readIssueAsUser } from './issues.js';
 
 const store = createForgeStore();
 const queue = new Queue({ key: 'scan-queue' });
-
-const notImplemented = (name) => async () => {
-  throw new Error(`${name} is not implemented yet`);
-};
 
 const definitions = createResolvers({
   store,
   queue,
   canAdminister,
   canBrowse,
-  ingestUrl: () => webTrigger.getUrl('ingest-trigger')
+  canAdministerJira,
+  ingestUrl: () => webTrigger.getUrl('ingest-trigger'),
+  mcpUrl: () => webTrigger.getUrl('mcp-trigger')
 });
 
 const resolver = new Resolver();
-for (const name of ['getConfig', 'saveRepo', 'clearPat', 'rotateScanToken', 'unlinkRepo', 'scanNow', 'getPosture', 'listLinkedProjects']) {
+for (const name of ['getConfig', 'saveRepo', 'clearPat', 'rotateScanToken', 'unlinkRepo', 'scanNow', 'getPosture', 'listLinkedProjects', 'rotateMcpToken', 'revokeMcpToken']) {
   resolver.define(name, (request) => definitions[name](request));
 }
 resolver.define('smokeTest', () => smokeTest());
@@ -66,7 +69,23 @@ export async function rescan() {
   console.info(`hourly rescan queued ${due.length} repo(s)`);
 }
 
-export const mcp = async () => ({ statusCode: 501, headers: { 'Content-Type': ['application/json'] }, body: '{"error":"Not implemented"}' });
-export const suggestFix = new Resolver().getDefinitions();
-export const rovoPosture = notImplemented('rovoPosture');
-export const rovoFindings = notImplemented('rovoFindings');
+export const mcp = createMcpHandler({ store });
+
+const llm = process.env.LLM_API_KEY
+  ? createLlmClient({ fetch, apiKey: process.env.LLM_API_KEY, baseUrl: process.env.LLM_BASE_URL || undefined, model: process.env.LLM_MODEL || undefined })
+  : null;
+const suggest = createSuggestFix({ store, readIssue: readIssueAsUser, addComment, llm });
+const suggestResolver = new Resolver();
+suggestResolver.define('suggestFix', ({ context }) => suggest(context?.extension?.issue?.key));
+export const suggestFix = suggestResolver.getDefinitions();
+
+// Rovo passes action inputs at the top level of the payload; results are filtered to projects the user can browse.
+export const rovoPosture = (payload) => getSecurityPosture(store, { projectKey: payload?.projectKey, canBrowse });
+export async function rovoFindings(payload) {
+  try {
+    return await listOpenFindings(store, { projectKey: payload?.projectKey, severity: payload?.severity, canBrowse });
+  } catch (error) {
+    if (error instanceof RangeError) return { error: error.message };
+    throw error;
+  }
+}

@@ -97,7 +97,6 @@ test('saving without issueType keeps the stored issue type', async () => {
   assert.equal(stored.issueType, 'Vulnerability');
   assert.equal(stored.llmOptIn, true);
 });
-||||||| a5e3384
 
 test('a case-only repo edit keeps the PAT reachable', async () => {
   const { store, resolvers } = await setup();
@@ -105,4 +104,19 @@ test('a case-only repo edit keeps the PAT reachable', async () => {
   const saved = await resolvers.saveRepo({ payload: { repoUrl: 'alice/repo' }, context: ctx });
   assert.equal(saved.repo.hasPat, true);
   assert.equal(await store.getPat(saved.repo.repoUrl), 'ghp_1');
+});
+
+test('only Jira admins can issue or revoke the MCP token', async () => {
+  const { store } = await setup();
+  const deny = createResolvers({ store, queue: { push: async () => {} }, canAdminister: async () => true, canBrowse: async () => true, ingestUrl: async () => '' });
+  await assert.rejects(deny.rotateMcpToken(), /Jira administrators/);
+
+  const allow = createResolvers({ store, queue: { push: async () => {} }, canAdminister: async () => true, canBrowse: async () => true, canAdministerJira: async () => true, ingestUrl: async () => '', mcpUrl: async () => 'https://x/mcp' });
+  const { mcpToken } = await allow.rotateMcpToken();
+  assert.equal((await store.getConfig('mcp')).tokenHash, hashToken(mcpToken));
+  const config = await allow.getConfig({ payload: {}, context: ctx });
+  assert.deepEqual({ ...config.mcp, createdAt: null }, { url: 'https://x/mcp', enabled: true, createdAt: null, canManage: true });
+  assert.ok(!JSON.stringify(config).includes(hashToken(mcpToken)));
+  await allow.revokeMcpToken();
+  assert.equal(await store.getConfig('mcp'), null);
 });
