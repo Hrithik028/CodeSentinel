@@ -35,7 +35,7 @@ export class ForgeStore {
   }
 
   setFingerprint(fingerprint, record) {
-    return this.set(keys.fingerprint(fingerprint), { ...record, fingerprint });
+    return this.set(keys.fingerprint(fingerprint), { fingerprint, ...record });
   }
 
   async allFingerprintRecords() {
