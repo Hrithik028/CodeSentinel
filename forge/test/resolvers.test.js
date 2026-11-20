@@ -88,3 +88,11 @@ test('posture respects browse permission and reports unconfigured gadgets', asyn
   assert.deepEqual(await resolvers.getPosture({ payload: {}, context: {} }), { configured: false });
   await assert.rejects(resolvers.getPosture({ payload: { projectKey: 'SEC' }, context: {} }), /access/);
 });
+
+test('a case-only repo edit keeps the PAT reachable', async () => {
+  const { store, resolvers } = await setup();
+  await resolvers.saveRepo({ payload: { repoUrl: 'Alice/Repo', pat: 'ghp_1' }, context: ctx });
+  const saved = await resolvers.saveRepo({ payload: { repoUrl: 'alice/repo' }, context: ctx });
+  assert.equal(saved.repo.hasPat, true);
+  assert.equal(await store.getPat(saved.repo.repoUrl), 'ghp_1');
+});

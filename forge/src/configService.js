@@ -44,7 +44,8 @@ export function createConfigService({ store, now = () => new Date().toISOString(
       let scanToken = null;
       const next = {
         ...(existing ?? { createdAt: now() }),
-        repoUrl: target.repoUrl,
+        // Keep the stored spelling for case-only edits; the PAT and checkpoint are keyed by it.
+        repoUrl: existing && !repoChanged ? existing.repoUrl : target.repoUrl,
         projectKey,
         issueType: issueType.trim(),
         llmOptIn: Boolean(llmOptIn),
@@ -60,7 +61,7 @@ export function createConfigService({ store, now = () => new Date().toISOString(
         await store.setScanState(existing.repoUrl, null);
       }
       if (typeof pat === 'string' && pat.trim()) {
-        await store.setPat(target.repoUrl, pat.trim());
+        await store.setPat(next.repoUrl, pat.trim());
         next.hasPat = true;
       }
 
