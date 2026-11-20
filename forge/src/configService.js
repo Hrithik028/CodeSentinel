@@ -29,17 +29,18 @@ export function createConfigService({ store, now = () => new Date().toISOString(
     },
 
     // Links (or re-links) one repo to one project. Returns the scan token only when a new one was generated.
-    async saveRepo(projectKey, { repoUrl, pat, llmOptIn = false, issueType = 'Bug' }) {
+    async saveRepo(projectKey, { repoUrl, pat, llmOptIn = false, issueType }) {
       if (!PROJECT_KEY.test(projectKey ?? '')) throw new Error('Invalid project key.');
       const target = normalizeRepo(repoUrl);
       if (!target) throw new Error('Enter a GitHub repository as https://github.com/owner/repo.');
-      if (typeof issueType !== 'string' || !issueType.trim() || issueType.length > 60) throw new Error('Invalid issue type.');
 
       const all = await repos();
       const clash = all.find((repo) => sameRepo(repo.repoUrl, target.repoUrl) && repo.projectKey !== projectKey);
       if (clash) throw new Error(`That repository is already linked to project ${clash.projectKey}.`);
 
       const existing = all.find((repo) => repo.projectKey === projectKey);
+      issueType ??= existing?.issueType ?? 'Bug';
+      if (typeof issueType !== 'string' || !issueType.trim() || issueType.length > 60) throw new Error('Invalid issue type.');
       const repoChanged = existing && !sameRepo(existing.repoUrl, target.repoUrl);
       let scanToken = null;
       const next = {
