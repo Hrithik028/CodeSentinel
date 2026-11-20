@@ -95,6 +95,10 @@ npm run check   # Syntax-check every JavaScript entry point
 npm run scan -- <folder> [--json]
 ```
 
+## Jira (Forge) integration
+
+CodeSentinel ships as an Atlassian Forge app for Codegeist 2026. The app turns critical and high findings into Jira issues and closes them when they are fixed. It also shows posture on a dashboard gadget and through Rovo and MCP. Start with [the integration spec](docs/spec/forge-integration.md) and [judge setup](docs/judge-setup.md). Design decisions are recorded in [`docs/adr/`](docs/adr).
+
 ## WorkflowHQ development linking
 
 CodeSentinel is connected to the `CODE` project in WorkflowHQ. Include an exact
