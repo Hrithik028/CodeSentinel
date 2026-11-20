@@ -65,11 +65,12 @@ export async function processReport(rawReport, repo, { source, commit = null, st
   for (const fingerprint of diff.toResolve) {
     const record = openRecords.find((item) => item.fingerprint === fingerprint);
     try {
-      if (!(await jira.transitionToDone(record.issueKey))) {
+      const transitioned = await jira.transitionToDone(record.issueKey);
+      if (!transitioned) {
         result.errors.push({ fingerprint, operation: 'resolve', message: 'No transition to a Done status is available' });
         continue;
       }
-      await jira.addComment(record.issueKey, RESOLVE_COMMENT);
+      if (transitioned !== 'already-done') await jira.addComment(record.issueKey, RESOLVE_COMMENT);
       await store.setFingerprint(recordKey(projectKey, fingerprint), { ...record, status: 'resolved', resolvedAt: timestamp });
       issueKeys.delete(fingerprint);
       result.resolved += 1;

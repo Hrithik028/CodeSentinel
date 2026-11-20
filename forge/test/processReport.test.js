@@ -138,3 +138,16 @@ test('excerpts on a line with a secret are redacted for every rule', async () =>
   assert.ok(jira.created.every((issue) => !issue.payload.description.includes('sk_live_raw_value')));
   assert.ok(!JSON.stringify(await store.getLatestScan('SEC')).includes('sk_live_raw_value'));
 });
+
+test('an issue already closed in Jira resolves the record without a comment', async () => {
+  const store = await tempStore();
+  await processReport(fixture('scan-a.json'), REPO, { source: 'ci', store, jira: fakeJira() });
+  const jira = fakeJira();
+  jira.transitionToDone = async () => 'already-done';
+  const result = await processReport({ ...fixture('scan-a.json'), findings: [] }, REPO, { source: 'ci', store, jira });
+
+  assert.ok(result.resolved > 0);
+  assert.equal(result.errors.length, 0);
+  assert.equal(jira.comments.length, 0);
+  assert.ok((await store.allFingerprintRecords()).every((r) => r.status === 'resolved'));
+});
