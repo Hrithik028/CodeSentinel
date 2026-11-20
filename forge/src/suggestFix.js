@@ -62,12 +62,13 @@ export function createLlmClient({ fetch, apiKey, baseUrl = 'https://api.openai.c
   };
 }
 
-// readIssue runs as the user (enforces issue permissions); addComment runs as the app.
-export function createSuggestFix({ store, readIssue, addComment, llm }) {
+// readIssue and canComment run as the user (enforce issue permissions); addComment runs as the app.
+export function createSuggestFix({ store, readIssue, canComment, addComment, llm }) {
   return async function suggestFix(issueKey) {
     if (!/^[A-Z][A-Z0-9_]+-\d+$/.test(issueKey ?? '')) throw new Error('Open this action from a Jira issue.');
     const issue = await readIssue(issueKey);
     if (!issue.labels?.includes('codesentinel')) throw new Error('This issue was not created by CodeSentinel.');
+    if (!(await canComment(issueKey))) throw new Error('You need permission to add comments to this issue.');
 
     const repo = ((await store.getConfig('repos')) ?? []).find((item) => item.projectKey === issue.projectKey);
     if (!repo?.llmOptIn) throw new Error('Suggest fix is turned off for this project. A project admin can enable it on the CodeSentinel page.');

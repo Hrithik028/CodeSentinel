@@ -6,7 +6,7 @@ import { createIngestHandler } from './ingestHandler.js';
 import { createForgeStore } from './store/forgeStore.js';
 import { jiraClient } from './jira.js';
 import { createResolvers } from './resolvers.js';
-import { canAdminister, canAdministerJira, canBrowse } from './permissions.js';
+import { canAdminister, canAdministerJira, canBrowse, canCommentOnIssue } from './permissions.js';
 import { createGitHubClient } from './github.js';
 import { runScanStep } from './scan.js';
 import { createMcpHandler } from './mcpHandler.js';
@@ -74,7 +74,7 @@ export const mcp = createMcpHandler({ store });
 const llm = process.env.LLM_API_KEY
   ? createLlmClient({ fetch, apiKey: process.env.LLM_API_KEY, baseUrl: process.env.LLM_BASE_URL || undefined, model: process.env.LLM_MODEL || undefined })
   : null;
-const suggest = createSuggestFix({ store, readIssue: readIssueAsUser, addComment, llm });
+const suggest = createSuggestFix({ store, readIssue: readIssueAsUser, canComment: canCommentOnIssue, addComment, llm });
 const suggestResolver = new Resolver();
 suggestResolver.define('suggestFix', ({ context }) => suggest(context?.extension?.issue?.key));
 export const suggestFix = suggestResolver.getDefinitions();
