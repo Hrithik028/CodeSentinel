@@ -6,6 +6,8 @@
   "private": true,
   "license": "MIT",
   "scripts": {
+    "build:ui": "npm --prefix static/ui ci && npm --prefix static/ui run build",
+    "predeploy": "npm run build:ui",
     "lint": "forge lint",
     "test": "node --test test/"
   },
