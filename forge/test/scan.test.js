@@ -94,3 +94,17 @@ test('GitHub client sends the PAT only in the Authorization header and decodes b
   assert.ok(!requests[0].url.includes('ghp_secret'));
   await assert.rejects(client.resolveHead('o', 'r'), (error) => error.status === 404 && !error.message.includes('ghp_secret'));
 });
+
+test('a run replaced mid-scan does not publish its results', async () => {
+  const store = await tempForgeLikeStore();
+  const github = fakeGitHub(sampleFiles);
+  const original = github.fetchBlob;
+  github.fetchBlob = async (...args) => {
+    await store.setScanState(REPO.repoUrl, { runId: 'newer', commit: 'x', cursor: 0, findings: [] });
+    return original(...args);
+  };
+  const step = await runScanStep(REPO, { store, jira: fakeJira(), github });
+  assert.equal(step.status, 'superseded');
+  assert.equal(await store.getLatestScan('SEC'), null);
+  assert.equal((await store.getScanState(REPO.repoUrl)).runId, 'newer');
+});
