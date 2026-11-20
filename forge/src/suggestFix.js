@@ -5,12 +5,12 @@ export const SUGGESTION_PREFIX = 'AI-generated suggestion (advisory only)';
 const MAX_EXCERPT_CHARS = 400;
 const MAX_SUGGESTION_CHARS = 4000;
 
-// Defence in depth on top of the scanner's SEC001 redaction: mask quoted values after
-// credential-like keys and any long token-like run before it leaves the site.
+// Defence in depth on top of the scanner's SEC001 redaction: mask everything after a
+// credential-like key's assignment to the end of the line, and any long token-like run before it leaves the site.
 export function redactForLlm(text) {
   return String(text ?? '')
     .slice(0, MAX_EXCERPT_CHARS)
-    .replace(/(["'`]?(?:api[_-]?key|secret|password|passwd|pwd|token|private[_-]?key|auth\w*|credential\w*)["'`]?\]?\s*[:=]\s*["'`])[^"'`\n]*(["'`])/gi, '$1[REDACTED]$2')
+    .replace(/((?:api[_-]?key|secret|password|passwd|pwd|token|private[_-]?key|auth\w*|credential\w*)["'`]?\]?\s*[:=]).*$/gim, '$1 [REDACTED]')
     .replace(/\b(?:[A-Za-z0-9+/_-]{24,}|[A-Fa-f0-9]{32,})\b/g, '[REDACTED]');
 }
 
