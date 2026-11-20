@@ -43,8 +43,10 @@ export default function Gadget({ context }) {
     );
   }
 
-  const counts = scan.summary.severityCounts;
-  const rows = scan.findings.map((f) => ({
+  const summary = scan.summary ?? {};
+  const counts = summary.severityCounts ?? {};
+  const findings = scan.findings ?? [];
+  const rows = findings.map((f) => ({
     key: f.fingerprint,
     cells: [
       { key: SEVERITIES.indexOf(f.severity), content: <Lozenge appearance={SEVERITY_APPEARANCE[f.severity]}>{f.severity}</Lozenge> },
@@ -57,9 +59,9 @@ export default function Gadget({ context }) {
   return (
     <div style={{ padding: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-        <div aria-label={`Grade ${scan.summary.grade}`} style={{ width: 56, height: 56, borderRadius: 8, background: GRADE_COLOR[scan.summary.grade] ?? '#626f86', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <strong style={{ fontSize: 22, lineHeight: 1 }}>{scan.summary.grade}</strong>
-          <span style={{ fontSize: 11 }}>{scan.summary.score}/100</span>
+        <div aria-label={`Grade ${summary.grade}`} style={{ width: 56, height: 56, borderRadius: 8, background: GRADE_COLOR[summary.grade] ?? '#626f86', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <strong style={{ fontSize: 22, lineHeight: 1 }}>{summary.grade ?? '?'}</strong>
+          <span style={{ fontSize: 11 }}>{summary.score ?? '–'}/100</span>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {SEVERITIES.map((s) => <Lozenge key={s} appearance={counts[s] ? SEVERITY_APPEARANCE[s] : 'default'} isBold={s === 'critical' && counts[s] > 0}>{counts[s] ?? 0} {s}</Lozenge>)}
@@ -80,7 +82,7 @@ export default function Gadget({ context }) {
           defaultSortOrder="ASC"
           emptyView={<p>No findings. Nice.</p>}
         />
-        {scan.findings.length < scan.summary.totalFindings && <p style={{ fontSize: 12 }}>Showing {scan.findings.length} of {scan.summary.totalFindings} findings.</p>}
+        {findings.length < (summary.totalFindings ?? 0) && <p style={{ fontSize: 12 }}>Showing {findings.length} of {summary.totalFindings} findings.</p>}
       </div>
       <Button appearance="subtle" onClick={reload}>Refresh</Button>
     </div>
