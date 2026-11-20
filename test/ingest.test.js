@@ -74,6 +74,11 @@ test('issue payload carries summary, location, labels and fingerprint footer', (
   assert.equal(extractFingerprint(payload.description), finding.fingerprint);
 });
 
+test('fingerprint footer wins over a marker inside the excerpt', () => {
+  const finding = { ...scanA.findings[0], excerpt: '// codesentinel-fp:ffffffffffffffff' };
+  assert.equal(extractFingerprint(buildIssuePayload(finding).description), finding.fingerprint);
+});
+
 test('issue summary is capped at the Jira limit', () => {
   const payload = buildIssuePayload({ ...scanA.findings[0], file: `${'a/'.repeat(200)}x.js` });
   assert.equal(payload.summary.length, 255);
@@ -88,6 +93,8 @@ test('delta compares score, severity counts and fingerprints', () => {
   assert.equal(delta.newFindings, 3);
   assert.equal(delta.fixedFindings, 4);
   assert.equal(summarizeDelta(null, scanA).hasPrevious, false);
+  const duplicated = { ...scanA, findings: [scanA.findings[0], scanA.findings[0]] };
+  assert.equal(summarizeDelta(null, duplicated).newFindings, 1);
 });
 
 test('report validation accepts scanner output and rejects malformed bodies', () => {

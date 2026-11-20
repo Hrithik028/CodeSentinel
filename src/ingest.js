@@ -67,8 +67,8 @@ export function buildIssuePayload(finding) {
 }
 
 export function extractFingerprint(text) {
-  const match = new RegExp(`${FINGERPRINT_MARKER}([0-9a-f]{16})`).exec(text ?? '');
-  return match ? match[1] : null;
+  const matches = [...(text ?? '').matchAll(new RegExp(`${FINGERPRINT_MARKER}([0-9a-f]{16})`, 'g'))];
+  return matches.length ? matches[matches.length - 1][1] : null;
 }
 
 export function summarizeDelta(previousReport, report) {
@@ -80,7 +80,7 @@ export function summarizeDelta(previousReport, report) {
       scoreDelta: 0,
       totalDelta: 0,
       severityDeltas: Object.fromEntries(SEVERITIES.map((severity) => [severity, 0])),
-      newFindings: report?.findings?.length ?? 0,
+      newFindings: new Set((report?.findings ?? []).map((finding) => finding.fingerprint)).size,
       fixedFindings: 0
     };
   }
