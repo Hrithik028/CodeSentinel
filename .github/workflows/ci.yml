@@ -15,3 +15,5 @@ jobs:
           node-version: 20
       - run: npm test
       - run: npm run check
+      - name: Forge shared core is in sync
+        run: scripts/sync-shared.sh --check
