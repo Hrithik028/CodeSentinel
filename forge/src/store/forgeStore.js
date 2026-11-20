@@ -11,8 +11,9 @@ const keys = {
 };
 
 // Forge KVS keys allow only [A-Za-z0-9:._\s-#]; repo URLs contain "/" so they are encoded.
-function safeKey(key) {
-  return key.replace(/[^A-Za-z0-9:._\-#]/g, (char) => `#${char.charCodeAt(0).toString(16)}`);
+// "#" is the escape character, so it is escaped too, with fixed-width hex, keeping the mapping injective.
+export function safeKey(key) {
+  return key.replace(/[^A-Za-z0-9:._-]/g, (char) => `#${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
 }
 
 export class ForgeStore {
