@@ -89,6 +89,15 @@ test('posture respects browse permission and reports unconfigured gadgets', asyn
   await assert.rejects(resolvers.getPosture({ payload: { projectKey: 'SEC' }, context: {} }), /access/);
 });
 
+test('saving without issueType keeps the stored issue type', async () => {
+  const { store, resolvers } = await setup();
+  await resolvers.saveRepo({ payload: { repoUrl: 'a/b', issueType: 'Vulnerability' }, context: ctx });
+  await resolvers.saveRepo({ payload: { repoUrl: 'a/b', llmOptIn: true }, context: ctx });
+  const [stored] = await store.getConfig('repos');
+  assert.equal(stored.issueType, 'Vulnerability');
+  assert.equal(stored.llmOptIn, true);
+});
+
 test('a case-only repo edit keeps the PAT reachable', async () => {
   const { store, resolvers } = await setup();
   await resolvers.saveRepo({ payload: { repoUrl: 'Alice/Repo', pat: 'ghp_1' }, context: ctx });

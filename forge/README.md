@@ -75,3 +75,18 @@ A Jira failure on one issue goes into `errors[]` and does not stop the run. A fa
 A step whose `runId` no longer matches the checkpoint is dropped as superseded. To fit in Forge storage, checkpoints keep only `fingerprint, ruleId, file, line, column, excerpt`; the rest is restored from `RULES` when the scan completes. A scan aborts with an error, without resolving anything, if its checkpoint would exceed 200 KB. The completed report goes through the same `processReport` as CI, with `source: 'app'`.
 
 The PAT is kept in KVS secret storage (`pat:{repoUrl}`) and sent only as the `Authorization` header to `api.github.com`. It is never returned to the UI (`hasPat` only) or logged. Unlinking or changing the repo deletes it.
+
+## Custom UI
+
+`static/ui` is a single Vite + React + Atlaskit bundle that serves the project page (`config-page`) and the dashboard gadget, including its edit view. It routes on `view.getContext()`. Deploy with `npm run deploy`, which builds the bundle and then runs `forge deploy`. If you call `forge deploy` directly, run `npm run build:ui` first. `static/ui/build` is git-ignored.
+
+- **Config page** (project admins only):
+  - Repo URL is validated client- and server-side.
+  - The PAT is a write-only password field; once saved, the page shows only whether one exists.
+  - The scan token and ingest URL are shown once after linking or rotating.
+  - Also provides the LLM opt-in, Scan now, last-scan status, and unlink.
+- **Gadget**: users pick a linked project in the edit view (browse permission required). The gadget shows:
+  - Grade and score badge, severity counts, and source and commit.
+  - Delta vs. the previous scan.
+  - A sortable findings table linking to Jira issues.
+  - Loading, empty, unconfigured, and error states.

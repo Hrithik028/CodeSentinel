@@ -1,0 +1,27 @@
+{
+  "name": "codesentinel-forge-ui",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "dependencies": {
+    "@atlaskit/button": "^25.8.3",
+    "@atlaskit/checkbox": "^19.3.3",
+    "@atlaskit/css-reset": "^8.4.10",
+    "@atlaskit/dynamic-table": "^19.3.9",
+    "@atlaskit/lozenge": "^17.0.9",
+    "@atlaskit/section-message": "^10.3.0",
+    "@atlaskit/spinner": "^20.4.4",
+    "@atlaskit/textfield": "^11.0.0",
+    "@forge/bridge": "^7.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.3.0",
+    "vite": "^8.3.8"
+  }
+}
