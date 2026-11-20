@@ -10,7 +10,7 @@ const MAX_SUGGESTION_CHARS = 4000;
 export function redactForLlm(text) {
   return String(text ?? '')
     .slice(0, MAX_EXCERPT_CHARS)
-    .replace(/((?:api[_-]?key|secret|password|passwd|token|private[_-]?key|auth\w*)\s*[:=]\s*["'])[^"'\n]*(["'])/gi, '$1[REDACTED]$2')
+    .replace(/(["'`]?(?:api[_-]?key|secret|password|passwd|pwd|token|private[_-]?key|auth\w*|credential\w*)["'`]?\]?\s*[:=]\s*["'`])[^"'`\n]*(["'`])/gi, '$1[REDACTED]$2')
     .replace(/\b(?:[A-Za-z0-9+/_-]{24,}|[A-Fa-f0-9]{32,})\b/g, '[REDACTED]');
 }
 

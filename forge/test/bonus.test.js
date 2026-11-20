@@ -103,6 +103,8 @@ test('parseIssue survives the ADF round trip', () => {
 test('redactForLlm masks credentials and long tokens', () => {
   assert.equal(redactForLlm('const apiKey = "abc12345xyz";'), 'const apiKey = "[REDACTED]";');
   assert.equal(redactForLlm('fetch(url, ghp_abcdefghijklmnopqrstuvwxyz0123)'), 'fetch(url, [REDACTED])');
+  assert.equal(redactForLlm('{"password": "correct-horse-battery"}'), '{"password": "[REDACTED]"}');
+  assert.equal(redactForLlm("conf['secret'] = 'abc'"), "conf['secret'] = '[REDACTED]'");
   assert.equal(redactForLlm('eval(userInput)'), 'eval(userInput)');
 });
 
