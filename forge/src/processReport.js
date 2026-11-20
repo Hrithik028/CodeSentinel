@@ -62,7 +62,9 @@ export async function processReport(rawReport, repo, { source, commit = null, st
     }
   }
 
-  for (const fingerprint of diff.toResolve) {
+  // A scan that stopped at the file cap (or a truncated GitHub tree) can't prove a finding is gone.
+  const partial = report.meta?.hitFileLimit === true;
+  for (const fingerprint of partial ? [] : diff.toResolve) {
     const record = openRecords.find((item) => item.fingerprint === fingerprint);
     try {
       const transitioned = await jira.transitionToDone(record.issueKey);

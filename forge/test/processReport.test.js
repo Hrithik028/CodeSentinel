@@ -151,3 +151,14 @@ test('an issue already closed in Jira resolves the record without a comment', as
   assert.equal(jira.comments.length, 0);
   assert.ok((await store.allFingerprintRecords()).every((r) => r.status === 'resolved'));
 });
+
+test('a scan that hit the file limit never resolves issues', async () => {
+  const store = await tempStore();
+  await processReport(fixture('scan-a.json'), REPO, { source: 'ci', store, jira: fakeJira() });
+  const jira = fakeJira();
+  const base = fixture('scan-a.json');
+  const result = await processReport({ ...base, meta: { ...base.meta, hitFileLimit: true }, findings: [] }, REPO, { source: 'app', store, jira });
+  assert.equal(result.resolved, 0);
+  assert.equal(jira.transitioned.length, 0);
+  assert.ok((await store.allFingerprintRecords()).every((r) => r.status === 'open'));
+});
