@@ -70,6 +70,12 @@ modules:
           type: string
           required: false
           description: Filter by severity (critical, high, medium or low).
+  rovo:mcp:
+    - key: codesentinel-mcp
+      name: CodeSentinel MCP
+      tools:
+        - get-security-posture
+        - list-open-findings
   rovo:agent:
     - key: codesentinel-agent
       name: CodeSentinel Security Analyst

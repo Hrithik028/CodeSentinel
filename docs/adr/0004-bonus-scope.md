@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | Marketplace | Yes | Listing submitted early; the review ticket link is enough for judging |
 | Rovo agent | Yes | `rovo:agent` "CodeSentinel Security Analyst" with actions `getSecurityPosture` and `listOpenFindings` |
-| Atlassian MCP | Yes | `mcp-trigger` web trigger with JSON-RPC `initialize`, `tools/list` and `tools/call`, exposing `get_security_posture` and `list_open_findings` |
+| Atlassian MCP | Yes | `rovo:mcp` module `codesentinel-mcp` exposing the two Rovo actions as tools for Rovo Studio agents and MCP clients; plus the `mcp-trigger` web trigger with JSON-RPC `initialize`, `tools/list` and `tools/call`, exposing `get_security_posture` and `list_open_findings` |
 | Teamwork Graph | **No** | — |
 
 ## Why not Teamwork Graph

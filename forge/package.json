@@ -9,7 +9,7 @@
     "build:ui": "npm --prefix static/ui ci && npm --prefix static/ui run build",
     "deploy": "npm run build:ui && forge deploy",
     "lint": "forge lint",
-    "test": "node --test test/"
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "@forge/api": "^8.5.0",

@@ -31,7 +31,8 @@ Create a Scrum or Kanban software project with key `SEC`, or use any existing pr
 
 - **Gadget:** Dashboards → Create dashboard → Add gadget → **CodeSentinel Security Posture** → choose the project.
 - **Rovo:** open Rovo chat → agents → **CodeSentinel Security Analyst** → ask "What is the security posture of SEC?"
-- **MCP:** on the project page, generate an **MCP token** and copy the MCP URL. Run `npx @modelcontextprotocol/inspector`, choose Streamable HTTP, enter the URL, and add the header `Authorization: Bearer <token>`. See `docs/spec/mcp-tools.md`.
+- **Rovo MCP:** Rovo Studio → create an agent → add tools → **CodeSentinel MCP** (`get-security-posture`, `list-open-findings`).
+- **MCP web trigger:** on the project page, generate an **MCP token** and copy the MCP URL. Run `npx @modelcontextprotocol/inspector`, choose Streamable HTTP, enter the URL, and add the header `Authorization: Bearer <token>`. See `docs/spec/mcp-tools.md`.
 - **Suggest fix (optional):** tick **Allow LLM suggestions** on the project page. Open a CodeSentinel issue → **⋯ → Suggest fix**.
 
 ## Troubleshooting

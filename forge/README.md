@@ -6,7 +6,7 @@ Atlassian Forge app that turns CodeSentinel findings into Jira issues. See [`doc
 
 | Path | Purpose |
 | --- | --- |
-| `manifest.yml` | Modules: ingest/MCP web triggers, project config page, dashboard gadget, Suggest fix issue action, hourly rescan, scan queue consumer, Rovo actions and agent |
+| `manifest.yml` | Modules: ingest/MCP web triggers, project config page, dashboard gadget, Suggest fix issue action, hourly rescan, scan queue consumer, Rovo actions, agent and `rovo:mcp` tools |
 | `src/index.js` | Function handlers referenced by the manifest |
 | `src/store/forgeStore.js` | Store interface (same as `src/store/fileStore.js`) over Forge KVS; PATs use secret storage |
 | `src/jira.js` | `asApp()` Jira wrappers: `createIssue`, `findIssueByFingerprint`, `addComment`, `transitionToDone` |
@@ -94,6 +94,7 @@ The PAT is kept in KVS secret storage (`pat:{repoUrl}`) and sent only as the `Au
 ## Bonus modules
 
 - **Rovo** (`get-security-posture`, `list-open-findings`, agent `codesentinel-agent`): reads stored scans through `src/posture.js`. Results are filtered to the projects the calling user can browse.
+- **Rovo MCP** (`rovo:mcp` module `codesentinel-mcp`): exposes the two Rovo actions as tools for Rovo Studio agents and MCP clients.
 - **MCP** (`mcp-trigger`): JSON-RPC 2.0 over HTTP POST, protocol `2025-06-18`. Supports `initialize`, `ping`, `tools/list` and `tools/call` with `get_security_posture` and `list_open_findings`. It authenticates with `Authorization: Bearer <MCP token>`. A Jira admin generates the token on the CodeSentinel page; only its hash is stored, in `config:mcp`. See `docs/spec/mcp-tools.md`.
 - **Suggest fix** (issue action): reads the issue as the user and requires the project's `llmOptIn`. It sends only the rule metadata and the one-line excerpt, re-redacted by `redactForLlm`, to an OpenAI-compatible endpoint. The suggestion is added as a comment starting with `AI-generated suggestion (advisory only)`. Configure it with:
   ```bash

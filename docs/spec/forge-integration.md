@@ -43,6 +43,7 @@ Issue format (from `buildIssuePayload`):
 | --- | --- | --- | --- |
 | `webtrigger` | `ingest-trigger` | `ingest-fn` | CI report ingestion |
 | `webtrigger` | `mcp-trigger` | `mcp-fn` | MCP JSON-RPC endpoint ([tools](mcp-tools.md)) |
+| `rovo:mcp` | `codesentinel-mcp` | actions `get-security-posture`, `list-open-findings` | Rovo MCP tools for Rovo Studio agents and MCP clients |
 | `jira:projectPage` | `config-page` | Custom UI `config` | Link repo, PAT, scan token, LLM opt-in, Scan now |
 | `jira:dashboardGadget` | `posture-gadget` | Custom UI `gadget` | Score, severity counts, findings, delta |
 | `jira:issueAction` | `suggest-fix` | Custom UI `suggest-fix` | LLM fix suggestion as a comment (opt-in) |
