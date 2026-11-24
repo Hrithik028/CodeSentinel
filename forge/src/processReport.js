@@ -8,7 +8,8 @@ const MAX_STORED_EXCERPT = 240;
 
 const SECRET_RULE = 'SEC001';
 const RESOLVE_COMMENT = 'CodeSentinel no longer detects this finding on the latest scan, so it was transitioned to Done.';
-const CREDENTIAL_VALUE = /([:=]\s*["'])[^"'\n]+(["'])/g;
+// The closing quote is optional: excerpts are capped at 240 chars and may cut a credential off.
+const CREDENTIAL_VALUE = /([:=]\s*["'])[^"'\n]*(["']|$)/g;
 
 const redactCredentials = (excerpt) => (typeof excerpt === 'string' ? excerpt.replace(CREDENTIAL_VALUE, '$1[REDACTED]$2') : excerpt);
 

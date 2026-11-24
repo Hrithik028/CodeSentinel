@@ -30,7 +30,7 @@ function lineDetails(content, index) {
 
 function redactExcerpt(excerpt, ruleId) {
   if (ruleId !== 'SEC001') return excerpt;
-  return excerpt.replace(/([:=]\s*["'])[^"']+(["'])/g, '$1[REDACTED]$2');
+  return excerpt.replace(/([:=]\s*["'])[^"'\n]*(["']|$)/g, '$1[REDACTED]$2');
 }
 
 async function collectFiles(rootPath) {

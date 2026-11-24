@@ -249,3 +249,9 @@ test('a scan finishing does not overwrite settings saved meanwhile', async () =>
   assert.equal(repos[0].llmOptIn, true);
   assert.ok(await store.getConfig('lastScan:SEC'));
 });
+
+test('a credential cut off by the excerpt limit is still redacted', () => {
+  const excerpt = `${'x'.repeat(200)} token = "tok_live_cut_off_value_1234567890`;
+  const { findings } = redactSecretLines({ findings: [{ ruleId: 'SEC001', file: 'a.js', line: 1, excerpt }, { ruleId: 'SEC004', file: 'a.js', line: 1, excerpt }] });
+  assert.ok(findings.every((f) => !f.excerpt.includes('tok_live_cut_off') && f.excerpt.endsWith('[REDACTED]')));
+});

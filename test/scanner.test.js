@@ -85,3 +85,10 @@ test('scannableExtensions lists every rule extension', () => {
   assert.ok(extensions.has('.py'));
   assert.ok(!extensions.has('.txt'));
 });
+
+test('redacts a secret whose closing quote is past the excerpt limit', async () => {
+  await withFixture({ 'config.js': `const padding = '${'p'.repeat(150)}'; const apiKey = '${'k'.repeat(80)}';` }, async (directory) => {
+    const report = await scanDirectory(directory);
+    for (const finding of report.findings.filter((f) => f.ruleId === 'SEC001')) assert.doesNotMatch(finding.excerpt, /kkkkkkkk/);
+  });
+});
