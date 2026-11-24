@@ -78,7 +78,7 @@ export function createResolvers({ store, queue, canAdminister, canBrowse, canAdm
         configured: true,
         projectKey,
         repoUrl: repo?.repoUrl ?? null,
-        lastScan: repo?.lastScan ?? null,
+        lastScan: await config.lastScanFor(repo),
         scan: (await store.getLatestScan(projectKey)) ?? null,
         running: repo ? await scanStatus(repo.repoUrl) : null
       };

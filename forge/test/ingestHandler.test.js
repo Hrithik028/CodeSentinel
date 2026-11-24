@@ -64,3 +64,16 @@ test('ignores a malformed commit header', async () => {
   await ingest(event({ commit: '<script>' }));
   assert.equal((await store.getLatestScan('SEC')).commit, null);
 });
+
+test('a late CI report for an older commit is acknowledged but not applied', async () => {
+  const { ingest, store } = await setup();
+  const newer = event();
+  newer.headers['x-commit-time'] = ['2026-11-20T10:00:00+11:00'];
+  assert.equal((await ingest(newer)).statusCode, 200);
+  const older = event({ body: JSON.stringify({ ...fixture('scan-a.json'), findings: [] }), commit: 'aaaaaaa' });
+  older.headers['x-commit-time'] = ['2026-11-19T10:00:00+11:00'];
+  const response = await ingest(older);
+  assert.equal(response.statusCode, 200);
+  assert.equal(JSON.parse(response.body).stale, true);
+  assert.equal((await store.getLatestScan('SEC')).commit, 'f0389c9c');
+});

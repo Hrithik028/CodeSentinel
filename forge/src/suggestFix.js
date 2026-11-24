@@ -1,5 +1,6 @@
 import { RULES } from './shared/rules.js';
 import { extractFingerprint } from './shared/ingest.js';
+import { recordKey } from './processReport.js';
 
 export const SUGGESTION_PREFIX = 'AI-generated suggestion (advisory only)';
 const MAX_EXCERPT_CHARS = 400;
@@ -74,8 +75,16 @@ export function createSuggestFix({ store, readIssue, canComment, addComment, llm
     if (!repo?.llmOptIn) throw new Error('Suggest fix is turned off for this project. A project admin can enable it on the CodeSentinel page.');
     if (!llm) throw new Error('No LLM is configured for this app installation.');
 
-    const { ruleId, excerpt, file } = parseIssue(issue);
-    const rule = RULES.find((item) => item.id === ruleId);
+    // Labels and descriptions are editable by Jira users, so the finding is read from app storage:
+    // the issue must be the one CodeSentinel created for a stored fingerprint of this project's repo.
+    const { fingerprint } = parseIssue(issue);
+    const record = fingerprint ? await store.getFingerprint(recordKey(issue.projectKey, fingerprint)) : null;
+    if (!record || record.issueKey !== issueKey || record.projectKey !== issue.projectKey || record.repoUrl !== repo.repoUrl) {
+      throw new Error('Could not match this issue to a CodeSentinel finding. Run a scan and try again.');
+    }
+    const rule = RULES.find((item) => item.id === record.ruleId);
+    const excerpt = (await store.getLatestScan(issue.projectKey))?.findings?.find((item) => item.fingerprint === fingerprint)?.excerpt ?? null;
+    const file = record.file;
     if (!rule || excerpt === null) throw new Error('Could not read the CodeSentinel finding from this issue.');
 
     const suggestion = (await llm(buildPrompt({ rule, file, excerpt: redactForLlm(excerpt) }))).slice(0, MAX_SUGGESTION_CHARS);

@@ -1,6 +1,8 @@
 import api, { route } from '@forge/api';
 import { textToAdf, adfToText } from './adf.js';
 import { FINGERPRINT_MARKER, extractFingerprint } from './shared/ingest.js';
+import { pickIssueType } from './issueTypes.js';
+import { REPO_MARKER, sameRepo } from './repos.js';
 
 export class JiraError extends Error {
   constructor(operation, status) {
@@ -18,14 +20,21 @@ async function requestJson(operation, path, options = {}) {
   return response.status === 204 ? null : response.json();
 }
 
+async function issueTypeField(projectKey, issueType) {
+  const meta = await requestJson('getIssueTypes', route`/rest/api/3/issue/createmeta/${projectKey}/issuetypes`);
+  const type = pickIssueType(meta.issueTypes ?? meta.values, issueType);
+  if (type) return { id: type.id };
+  return /^\d+$/.test(String(issueType)) ? { id: String(issueType) } : { name: issueType };
+}
+
 export async function createIssue(projectKey, payload, issueType = 'Bug') {
-  const issueTypeField = /^\d+$/.test(String(issueType)) ? { id: String(issueType) } : { name: issueType };
+  const issuetype = await issueTypeField(projectKey, issueType);
   const created = await requestJson('createIssue', route`/rest/api/3/issue`, {
     method: 'POST',
     body: JSON.stringify({
       fields: {
         project: { key: projectKey },
-        issuetype: issueTypeField,
+        issuetype,
         summary: payload.summary,
         description: textToAdf(payload.description),
         labels: payload.labels
@@ -35,14 +44,23 @@ export async function createIssue(projectKey, payload, issueType = 'Bug') {
   return { issueId: created.id, issueKey: created.key };
 }
 
-export async function findIssueByFingerprint(projectKey, fingerprint) {
+const repoOf = (text) => new RegExp(`^${REPO_MARKER}(\\S+)$`, 'm').exec(text)?.[1] ?? null;
+
+// Returns an open issue for this fingerprint created for `repoUrl`, or a legacy issue without a repo
+// footer (repoUrl: null); issues created for a different repo are never returned.
+export async function findIssueByFingerprint(projectKey, fingerprint, repoUrl) {
   const jql = `project = "${projectKey}" AND labels = codesentinel AND text ~ "\\"${FINGERPRINT_MARKER}${fingerprint}\\"" AND statusCategory != Done`;
   const result = await requestJson('findIssueByFingerprint', route`/rest/api/3/search/jql`, {
     method: 'POST',
     body: JSON.stringify({ jql, fields: ['description'], maxResults: 10 })
   });
-  const match = (result.issues ?? []).find((issue) => extractFingerprint(adfToText(issue.fields?.description)) === fingerprint);
-  return match ? { issueId: match.id, issueKey: match.key } : null;
+  const candidates = (result.issues ?? [])
+    .map((issue) => ({ issue, text: adfToText(issue.fields?.description) }))
+    .filter(({ text }) => extractFingerprint(text) === fingerprint)
+    .map(({ issue, text }) => ({ issueId: issue.id, issueKey: issue.key, repoUrl: repoOf(text) }));
+  return candidates.find((c) => c.repoUrl && sameRepo(c.repoUrl, repoUrl))
+    ?? candidates.find((c) => !c.repoUrl)
+    ?? null;
 }
 
 export async function addComment(issueKey, text) {

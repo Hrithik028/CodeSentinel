@@ -3,7 +3,7 @@ import { RULES } from './shared/rules.js';
 import { scanContent } from './shared/scanner.js';
 import { BATCH_SIZE, extensionOf } from './github.js';
 import { buildReport } from './report.js';
-import { processReport } from './processReport.js';
+import { processReport, redactSecretLines } from './processReport.js';
 import { normalizeRepo } from './repos.js';
 
 export const STEP_BUDGET_MS = 20_000;
@@ -59,6 +59,7 @@ export async function runScanStep(repo, { store, jira, github, runId = null, clo
       startedAt: new Date(started).toISOString(),
       branch: head.branch,
       commit: head.commit,
+      commitTime: head.commitTime ?? null,
       cursor: 0,
       findings: [],
       scannedFiles: 0,
@@ -69,7 +70,10 @@ export async function runScanStep(repo, { store, jira, github, runId = null, clo
 
   const listing = await github.listScannableFiles(owner, name, state.commit);
   const files = listing.files;
-  if (state.cursor === 0) state.skipped = listing.skipped.slice(0, MAX_SKIPPED);
+  if (state.cursor === 0) {
+    state.skipped = listing.skipped.slice(0, MAX_SKIPPED);
+    state.skippedTruncated = listing.skipped.length > MAX_SKIPPED;
+  }
 
   while (state.cursor < files.length) {
     if (clock() - started >= budgetMs) {
@@ -82,11 +86,14 @@ export async function runScanStep(repo, { store, jira, github, runId = null, clo
       const content = contents[index];
       if (content.includes('\u0000')) {
         if (state.skipped.length < MAX_SKIPPED) state.skipped.push({ path: file.path, reason: 'binary-file' });
+        else state.skippedTruncated = true;
         return;
       }
       state.scannedFiles += 1;
       state.scannedBytes += file.size;
-      state.findings.push(...scanContent(content, file.path, extensionOf(file.path)).map(compact));
+      // Redact per file before checkpointing so no stored state holds a raw secret.
+      const { findings } = redactSecretLines({ findings: scanContent(content, file.path, extensionOf(file.path)) });
+      state.findings.push(...findings.map(compact));
     });
     state.cursor += batch.length;
   }
@@ -98,14 +105,15 @@ export async function runScanStep(repo, { store, jira, github, runId = null, clo
     scannedFiles: state.scannedFiles,
     scannedBytes: state.scannedBytes,
     skipped: state.skipped,
-    hitFileLimit: listing.hitFileLimit || listing.truncatedTree,
+    // A capped skipped list can't name every unscanned file, so resolution is suspended.
+    hitFileLimit: listing.hitFileLimit || listing.truncatedTree || state.skippedTruncated === true,
     branch: state.branch,
     commit: state.commit
   });
   // Scan now may have replaced this run while it was fetching; never publish a superseded run.
   const current = await store.getScanState(repo.repoUrl);
   if (current && current.runId !== state.runId) return { status: 'superseded' };
-  const result = await processReport(report, repo, { source: 'app', commit: state.commit, store, jira });
+  const result = await processReport(report, repo, { source: 'app', commit: state.commit, commitTime: state.commitTime ?? null, store, jira });
   if ((await store.getScanState(repo.repoUrl))?.runId === state.runId) await store.setScanState(repo.repoUrl, null);
   return { status: 'completed', result };
 }

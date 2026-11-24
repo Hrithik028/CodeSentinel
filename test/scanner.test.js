@@ -41,6 +41,16 @@ test('redacts secrets from report excerpts', async () => {
   });
 });
 
+test('redacts every secret on a line', async () => {
+  await withFixture({ 'config.js': `const conf = { password: 'first-secret-value', apiKey: 'second-secret-value' };` }, async (directory) => {
+    const report = await scanDirectory(directory);
+    assert.ok(report.findings.length >= 1);
+    for (const finding of report.findings) {
+      assert.doesNotMatch(finding.excerpt, /first-secret-value|second-secret-value/);
+    }
+  });
+});
+
 test('ignores dependency folders and unsupported files', async () => {
   await withFixture({
     'safe.js': `const greeting = 'hello';`,
@@ -74,4 +84,11 @@ test('scannableExtensions lists every rule extension', () => {
   assert.ok(extensions.has('.js'));
   assert.ok(extensions.has('.py'));
   assert.ok(!extensions.has('.txt'));
+});
+
+test('redacts a secret whose closing quote is past the excerpt limit', async () => {
+  await withFixture({ 'config.js': `const padding = '${'p'.repeat(150)}'; const apiKey = '${'k'.repeat(80)}';` }, async (directory) => {
+    const report = await scanDirectory(directory);
+    for (const finding of report.findings.filter((f) => f.ruleId === 'SEC001')) assert.doesNotMatch(finding.excerpt, /kkkkkkkk/);
+  });
 });

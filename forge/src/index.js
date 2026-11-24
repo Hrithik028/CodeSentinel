@@ -9,6 +9,7 @@ import { createResolvers } from './resolvers.js';
 import { canAdminister, canAdministerJira, canBrowse, canCommentOnIssue } from './permissions.js';
 import { createGitHubClient } from './github.js';
 import { runScanStep } from './scan.js';
+import { setLastScan } from './processReport.js';
 import { createMcpHandler } from './mcpHandler.js';
 import { getSecurityPosture, listOpenFindings } from './posture.js';
 import { createLlmClient, createSuggestFix } from './suggestFix.js';
@@ -44,9 +45,12 @@ export const ingest = createIngestHandler({ store, jira: jiraClient });
 export async function scanWorker(event) {
   const { repoUrl, runId = null } = event?.body ?? {};
   const repo = ((await store.getConfig('repos')) ?? []).find((item) => item.repoUrl === repoUrl);
-  if (!repo?.hasPat) return;
-  const pat = await store.getPat(repo.repoUrl);
-  if (!pat) return;
+  const pat = repo?.hasPat ? await store.getPat(repo.repoUrl) : null;
+  if (!pat) {
+    // The repo was unlinked or its PAT removed mid-scan: drop the checkpoint so later scans can start.
+    if (repoUrl && runId && (await store.getScanState(repoUrl))?.runId === runId) await store.setScanState(repoUrl, null);
+    return;
+  }
   const github = createGitHubClient({ fetch, pat });
   try {
     const step = await runScanStep(repo, { store, jira: jiraClient, github, runId });
@@ -55,8 +59,7 @@ export async function scanWorker(event) {
   } catch (error) {
     await store.setScanState(repo.repoUrl, null);
     const lastScan = { at: new Date().toISOString(), source: 'app', status: 'error', error: error.status ? `GitHub or Jira returned HTTP ${error.status}` : error.message };
-    const repos = (await store.getConfig('repos')) ?? [];
-    await store.setConfig('repos', repos.map((item) => (item.repoUrl === repoUrl ? { ...item, lastScan } : item)));
+    await setLastScan(store, repo, lastScan);
     console.warn(`app scan ${repo.projectKey} failed: ${lastScan.error}`);
   }
 }

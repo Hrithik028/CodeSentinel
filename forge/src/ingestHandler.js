@@ -40,13 +40,15 @@ export function createIngestHandler({ store, jira, log = console }) {
     if (invalid) return respond(400, { error: invalid });
 
     const commit = header(event, 'x-commit') ?? null;
+    const commitTime = header(event, 'x-commit-time') ?? null;
     const result = await processReport(report, repo, {
       source: 'ci',
       commit: /^[0-9a-f]{7,40}$/i.test(commit ?? '') ? commit : null,
+      commitTime: Number.isNaN(Date.parse(commitTime ?? '')) ? null : new Date(commitTime).toISOString(),
       store,
       jira
     });
-    log.info?.(`ingest ${repo.projectKey}: created=${result.created} resolved=${result.resolved} unchanged=${result.unchanged} errors=${result.errors.length}`);
+    log.info?.(`ingest ${repo.projectKey}: ${result.stale ? 'stale report ignored ' : ''}created=${result.created} resolved=${result.resolved} unchanged=${result.unchanged} errors=${result.errors.length}`);
     return respond(200, result);
   };
 }

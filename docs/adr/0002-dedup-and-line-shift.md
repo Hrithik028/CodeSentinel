@@ -32,5 +32,7 @@ Future work: a line-independent `matchKey` (ruleId + path + normalised match + o
 ## Other notes
 
 - Fingerprints do not include the repository. `fp:` records store `repoUrl`, and open sets are filtered per repo. We treat 64-bit collisions across repos as negligible.
+- A JQL match is not adopted when it is an open issue tracked for a different repo previously linked to the same project; a new issue is created instead.
+- Skipped files (too large, binary, unreadable) never resolve the findings they used to contain, and reports for an older commit (by `commitTime`) are ignored.
 - If a resolved finding reappears, a new issue is created. Done issues are not reopened.
 - Only default-branch pushes in CI should send reports. A feature branch that removes a finding would otherwise resolve an issue that still exists on the default branch. The demo workflow enforces this.
