@@ -1,6 +1,8 @@
 # Marketplace listing (CS-8)
 
-Paste these into **developer.atlassian.com → Console → CodeSentinel → Distribution → List on Marketplace**. The listing only needs to be *submitted* for the Codegeist Marketplace bonus; record the review ticket link in `docs/submission-checklist.md`.
+Paste these into **developer.atlassian.com → Console → CodeSentinel Marketplace → Distribution → List on Marketplace**.
+
+Submit from the **CodeSentinel Marketplace** app (`ari:cloud:ecosystem::app/ced0fd83-cabe-48c7-adcd-ca4440fa7b05`, same code, production deployed), not from the judge app `CodeSentinel`. Atlassian disables install-link sharing for an app once it is submitted to Marketplace, so the judge app must stay unsubmitted. To redeploy the Marketplace app, copy `forge/`, set `app.id` in `manifest.yml` to the ID above and run `forge deploy -e production`. The listing only needs to be *submitted* for the Codegeist Marketplace bonus; record the review ticket link in `docs/submission-checklist.md`.
 
 ## Basics
 

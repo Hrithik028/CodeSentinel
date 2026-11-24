@@ -20,12 +20,14 @@ Record every manual or end-to-end verification here: date, environment, steps, r
 | 2026-11-24 | CI ingest (demo site) | `development` on one-atlas-cieg, project SEC | codesentinel-demo Actions run 44747991711 with fresh `SCAN_TOKEN` | Pass: `{"created":5,"resolved":0,"unchanged":0}`; rerun `{"created":0,"unchanged":5}` (no duplicates) | Actions log |
 | 2026-11-24 | Rovo agent (demo site) | `development` on one-atlas-cieg | Rovo chat → CodeSentinel Security Analyst: "What is the security posture of SEC?", "List open critical findings" | Pass: F / 25, 5 open, severity counts; SEC-1 SEC001 with redacted excerpt | `docs/screenshots/rovo-posture-demo-site.png`, `docs/screenshots/rovo-findings-demo-site.png` |
 | 2026-11-24 | `rovo:mcp` in Rovo Studio | `development` on one-atlas-cieg | Studio → new agent → Add tools → Connected apps → CodeSentinel | Pass: `Get security posture` and `List open findings` listed as tools | `docs/screenshots/rovo-mcp-studio-tools.png` |
+| 2026-11-24 | Judge install link | `production` app `CodeSentinel` | Distribution → Sharing with anyone → Jira; open link | Pass: install page shows CodeSentinel, vendor, privacy policy, support contact, Jira scopes and 2 egress domains | `docs/screenshots/judge-install-page.png` |
+| 2026-11-24 | Marketplace app | `production` app `CodeSentinel Marketplace` (`ced0fd83-cabe-48c7-adcd-ca4440fa7b05`) | `forge register`, `forge variables set --encrypt LLM_API_KEY`, `forge deploy -e production` | Pass: deployed; separate app ID keeps the judge install link working after Marketplace submission | CLI output |
 
 ## Pending end-to-end runs
 
 - [ ] CI path, clean site: install with the judge link → link repo → push → 5 issues → re-push → 0 created → fix secret → 1 resolved
 - [ ] App path, clean site: link repo + PAT → Scan now → 5 issues; hourly rescan observed in logs (no new issues)
 - [x] Web trigger negative cases: 405, 401, 413, 400, 404
-- [ ] Rovo: both actions invoked from chat
+- [x] Rovo: both actions invoked from chat
 - [x] MCP Inspector: `initialize`, `tools/list`, `tools/call` for both tools
 - [ ] Suggest fix: blocked when `llmOptIn` is false (unit-tested); comment posted when true (verified live)
