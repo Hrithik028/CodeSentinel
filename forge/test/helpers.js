@@ -46,3 +46,30 @@ export const REPO = {
   projectKey: 'SEC',
   issueType: 'Bug'
 };
+
+// FileStore plus the Forge-only PAT secret methods.
+export async function tempForgeLikeStore() {
+  const store = await tempStore();
+  const pats = new Map();
+  store.pats = pats;
+  store.getPat = async (repoUrl) => pats.get(repoUrl) ?? null;
+  store.setPat = async (repoUrl, pat) => { if (pat) pats.set(repoUrl, pat); else pats.delete(repoUrl); };
+  return store;
+}
+
+export function fakeGitHub(files, { commit = 'c0ffee0000000000000000000000000000000000' } = {}) {
+  const calls = { blobs: 0, lists: 0 };
+  return {
+    calls,
+    async resolveHead() { return { branch: 'main', commit }; },
+    async listScannableFiles() {
+      calls.lists += 1;
+      const { selectFiles } = await import('../src/github.js');
+      return { truncatedTree: false, ...selectFiles(files.map((f) => ({ type: 'blob', path: f.path, sha: f.path, size: Buffer.byteLength(f.content) }))) };
+    },
+    async fetchBlob(owner, repo, sha) {
+      calls.blobs += 1;
+      return files.find((f) => f.path === sha).content;
+    }
+  };
+}
