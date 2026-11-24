@@ -1,6 +1,9 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 // Last-scan status lives under its own key so scans never rewrite the shared repos list.
+// Footer line in issue descriptions naming the repo a finding came from; used to scope JQL matches.
+export const REPO_MARKER = 'codesentinel-repo: ';
+
 export const lastScanKey = (projectKey) => `lastScan:${projectKey}`;
 
 export function hashToken(token) {

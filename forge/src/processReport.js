@@ -1,5 +1,5 @@
 import { buildIssuePayload, diffReports, summarizeDelta } from './shared/ingest.js';
-import { lastScanKey } from './repos.js';
+import { lastScanKey, REPO_MARKER } from './repos.js';
 
 export const MAX_STORED_FINDINGS = 200;
 // Forge KVS values are capped at 240 KiB; keep the published scan well below that.
@@ -47,14 +47,18 @@ export function fitLatestScan(scan, findings, maxBytes = MAX_STORED_SCAN_BYTES) 
   return stored;
 }
 
+const withRepoFooter = (payload, repoUrl) => ({ ...payload, description: `${payload.description}\n${REPO_MARKER}${repoUrl}` });
+
 const isOlder = (commitTime, previous) => Boolean(commitTime && previous?.commitTime && Date.parse(commitTime) < Date.parse(previous.commitTime));
 
 export async function processReport(rawReport, repo, { source, commit = null, commitTime = null, store, jira, now = () => new Date().toISOString() }) {
   const report = redactSecretLines(rawReport);
   const { repoUrl, projectKey } = repo;
   const previousScan = await store.getLatestScan(projectKey);
-  // A report for an older commit arriving late must not roll back state from a newer one.
-  if (previousScan?.repoUrl === repoUrl && isOlder(commitTime, previousScan)) {
+  const sameRepoScan = previousScan?.repoUrl === repoUrl;
+  // A CI report for an older commit arriving late must not roll back state from a newer one. App scans
+  // always read the live branch head, so they are never stale and also reset the cutoff after a rollback.
+  if (source !== 'app' && sameRepoScan && isOlder(commitTime, previousScan)) {
     return { created: 0, resolved: 0, unchanged: 0, errors: [], stale: true };
   }
 
@@ -77,10 +81,11 @@ export async function processReport(rawReport, repo, { source, commit = null, co
 
   for (const finding of diff.toCreate) {
     try {
-      const found = await jira.findIssueByFingerprint(projectKey, finding.fingerprint);
-      const issue = found && !foreignIssueKeys.has(found.issueKey)
+      // Issues carry a repo footer; legacy issues without one are adopted only if no other repo tracks them.
+      const found = await jira.findIssueByFingerprint(projectKey, finding.fingerprint, repoUrl);
+      const issue = found && (found.repoUrl || !foreignIssueKeys.has(found.issueKey))
         ? found
-        : await jira.createIssue(projectKey, buildIssuePayload(finding), repo.issueType ?? 'Bug');
+        : await jira.createIssue(projectKey, withRepoFooter(buildIssuePayload(finding), repoUrl), repo.issueType ?? 'Bug');
       await store.setFingerprint(recordKey(projectKey, finding.fingerprint), {
         fingerprint: finding.fingerprint,
         repoUrl,
@@ -132,7 +137,8 @@ export async function processReport(rawReport, repo, { source, commit = null, co
     repoUrl,
     source,
     commit,
-    commitTime,
+    // An untimed report keeps the last known cutoff so a later, older timed report is still rejected.
+    commitTime: commitTime ?? (sameRepoScan ? previousScan.commitTime ?? null : null),
     receivedAt: timestamp,
     meta: report.meta ?? {},
     summary: report.summary,

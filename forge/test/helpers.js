@@ -19,8 +19,9 @@ export function fakeJira({ failCreateFor = new Set(), existing = new Map() } = {
     created: [],
     comments: [],
     transitioned: [],
-    async findIssueByFingerprint(projectKey, fingerprint) {
-      return existing.get(fingerprint) ?? null;
+    async findIssueByFingerprint(projectKey, fingerprint, repoUrl) {
+      const issue = existing.get(fingerprint);
+      return issue && (!issue.repoUrl || issue.repoUrl === repoUrl) ? issue : null;
     },
     async createIssue(projectKey, payload) {
       const fingerprint = /codesentinel-fp:([0-9a-f]{16})/.exec(payload.description)[1];

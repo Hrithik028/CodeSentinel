@@ -264,3 +264,47 @@ test('malformed skipped data cannot abort a report halfway', async () => {
     assert.ok(await store.getLatestScan('SEC'));
   }
 });
+
+test('issues carry a repo footer and an issue for another repo is never adopted, tracked or not', async () => {
+  const store = await tempStore();
+  const report = fixture('scan-a.json');
+  const finding = report.findings.find((f) => f.severity === 'high');
+  const jira = fakeJira({ existing: new Map([[finding.fingerprint, { issueId: '177', issueKey: 'SEC-77', repoUrl: 'https://github.com/a/original' }]]) });
+
+  await processReport(report, REPO, { source: 'ci', store, jira });
+
+  assert.notEqual((await store.getFingerprint(recordKey('SEC', finding.fingerprint))).issueKey, 'SEC-77');
+  assert.ok(jira.created.every((issue) => issue.payload.description.endsWith(`codesentinel-repo: ${REPO.repoUrl}`)));
+});
+
+test('an issue with this repo\'s footer is adopted', async () => {
+  const store = await tempStore();
+  const report = fixture('scan-a.json');
+  const finding = report.findings.find((f) => f.severity === 'high');
+  const jira = fakeJira({ existing: new Map([[finding.fingerprint, { issueId: '178', issueKey: 'SEC-78', repoUrl: REPO.repoUrl }]]) });
+  await processReport(report, REPO, { source: 'ci', store, jira });
+  assert.equal((await store.getFingerprint(recordKey('SEC', finding.fingerprint))).issueKey, 'SEC-78');
+});
+
+test('an untimed report keeps the stale cutoff', async () => {
+  const store = await tempStore();
+  const jira = fakeJira();
+  const report = fixture('scan-a.json');
+  await processReport(report, REPO, { source: 'ci', commitTime: '2026-11-20T10:00:00.000Z', store, jira });
+  await processReport(report, REPO, { source: 'ci', store, jira });
+  assert.equal((await store.getLatestScan('SEC')).commitTime, '2026-11-20T10:00:00.000Z');
+  const stale = await processReport({ ...report, findings: [] }, REPO, { source: 'ci', commitTime: '2026-11-19T10:00:00.000Z', store, jira });
+  assert.equal(stale.stale, true);
+  assert.equal(jira.transitioned.length, 0);
+});
+
+test('an app scan after a branch rollback is applied and resets the cutoff', async () => {
+  const store = await tempStore();
+  const jira = fakeJira();
+  const report = fixture('scan-a.json');
+  await processReport(report, REPO, { source: 'app', commitTime: '2026-11-20T10:00:00.000Z', store, jira });
+  const rolledBack = await processReport({ ...report, findings: [] }, REPO, { source: 'app', commitTime: '2026-11-18T10:00:00.000Z', store, jira });
+  assert.equal(rolledBack.stale, undefined);
+  assert.ok(rolledBack.resolved > 0);
+  assert.equal((await store.getLatestScan('SEC')).commitTime, '2026-11-18T10:00:00.000Z');
+});
