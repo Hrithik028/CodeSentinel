@@ -1,4 +1,4 @@
-import { generateToken, hashToken, normalizeRepo, sameRepo } from './repos.js';
+import { generateToken, hashToken, lastScanKey, normalizeRepo, sameRepo } from './repos.js';
 
 export class AccessError extends Error {}
 
@@ -20,12 +20,19 @@ export function createConfigService({ store, now = () => new Date().toISOString(
     return (await repos()).find((repo) => repo.projectKey === projectKey) ?? null;
   }
 
+  async function lastScanFor(repo) {
+    if (!repo) return null;
+    return (await store.getConfig(lastScanKey(repo.projectKey))) ?? repo.lastScan ?? null;
+  }
+
   return {
     repos,
     repoForProject,
+    lastScanFor,
 
     async getProjectConfig(projectKey) {
-      return publicRepo(await repoForProject(projectKey));
+      const repo = await repoForProject(projectKey);
+      return repo ? publicRepo({ ...repo, lastScan: await lastScanFor(repo) }) : null;
     },
 
     // Links (or re-links) one repo to one project. Returns the scan token only when a new one was generated.
@@ -58,6 +65,7 @@ export function createConfigService({ store, now = () => new Date().toISOString(
       }
       if (repoChanged) {
         delete next.lastScan;
+        await store.setConfig(lastScanKey(projectKey), null);
         await store.setPat(existing.repoUrl, null);
         await store.setScanState(existing.repoUrl, null);
       }
@@ -74,6 +82,7 @@ export function createConfigService({ store, now = () => new Date().toISOString(
       const repo = await repoForProject(projectKey);
       if (!repo) throw new Error('No repository is linked to this project.');
       await store.setPat(repo.repoUrl, null);
+      await store.setScanState(repo.repoUrl, null);
       return this.update(projectKey, { hasPat: false });
     },
 
@@ -98,6 +107,7 @@ export function createConfigService({ store, now = () => new Date().toISOString(
       if (!repo) return;
       await store.setPat(repo.repoUrl, null);
       await store.setScanState(repo.repoUrl, null);
+      await store.setConfig(lastScanKey(projectKey), null);
       await store.setConfig('repos', all.filter((item) => item.projectKey !== projectKey));
     }
   };

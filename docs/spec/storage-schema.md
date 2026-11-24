@@ -54,11 +54,14 @@ Forge-only (secret storage, `kvs.setSecret`/`getSecret`, encrypted, never sent t
     "scanTokenHash": "sha256 hex of the scan token",
     "hasPat": true,
     "llmOptIn": false,
-    "createdAt": "2026-11-20T12:00:00.000Z",
-    "lastScan": { "at": "…", "source": "ci", "status": "ok", "created": 5, "resolved": 0, "unchanged": 0, "errors": 0 }
+    "createdAt": "2026-11-20T12:00:00.000Z"
   }
 ]
 ```
+
+### `config:lastScan:{projectKey}`
+
+`{ "at": "…", "source": "ci", "status": "ok", "score": 25, "grade": "F", "created": 5, "resolved": 0, "unchanged": 0, "errors": 0 }`. Written by scans under its own key so a scan finishing never rewrites `config:repos` (and can't undo settings saved while it ran). Cleared on unlink or repo change. A legacy `lastScan` inside `config:repos` is still read as a fallback.
 
 The plaintext scan token is generated server-side (`crypto.randomBytes(24)`, base64url), returned to the config page exactly once, and stored only as `scanTokenHash`. Comparison uses `crypto.timingSafeEqual` on the hashes.
 
@@ -73,6 +76,7 @@ The plaintext scan token is generated server-side (`crypto.randomBytes(24)`, bas
   "repoUrl": "https://github.com/Hrithik028/codesentinel-demo",
   "source": "ci",
   "commit": "9f1c…",
+  "commitTime": "2026-11-20T11:59:00.000Z",
   "receivedAt": "2026-11-20T12:00:05.000Z",
   "meta": { "...": "report.meta" },
   "summary": { "...": "report.summary" },
@@ -83,8 +87,8 @@ The plaintext scan token is generated server-side (`crypto.randomBytes(24)`, bas
 }
 ```
 
-At most 200 findings are stored (Forge values are size-limited); `truncated` is `true` when more existed. Medium/low findings are stored without `issueKey`.
+At most 200 findings are stored, without `remediation` and with excerpts capped at 240 chars; if the value would still exceed 200 KiB (Forge values are capped at 240 KiB), findings are dropped until it fits. `truncated` is `true` when any finding was left out. `commitTime` orders reports; older ones are ignored. Medium/low findings are stored without `issueKey`.
 
 ### `scanstate:{repoUrl}`
 
-Checkpoint of an in-progress app-side scan: `{ runId, startedAt, branch, commit, files: [{ path, sha }], cursor, findings, scannedFiles, scannedBytes, skipped, hitFileLimit }`. Deleted when the scan completes; a new run with a different `runId` overwrites a stale checkpoint.
+Checkpoint of an in-progress app-side scan: `{ runId, startedAt, branch, commit, commitTime, cursor, findings, scannedFiles, scannedBytes, skipped, skippedTruncated }`. Findings are redacted before the checkpoint is written. Deleted when the scan completes; a new run with a different `runId` overwrites a stale checkpoint.

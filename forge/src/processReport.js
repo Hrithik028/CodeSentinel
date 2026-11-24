@@ -1,36 +1,69 @@
 import { buildIssuePayload, diffReports, summarizeDelta } from './shared/ingest.js';
+import { lastScanKey } from './repos.js';
 
 export const MAX_STORED_FINDINGS = 200;
+// Forge KVS values are capped at 240 KiB; keep the published scan well below that.
+export const MAX_STORED_SCAN_BYTES = 200 * 1024;
+const MAX_STORED_EXCERPT = 240;
 
 const SECRET_RULE = 'SEC001';
 const RESOLVE_COMMENT = 'CodeSentinel no longer detects this finding on the latest scan, so it was transitioned to Done.';
+const CREDENTIAL_VALUE = /([:=]\s*["'])[^"'\n]+(["'])/g;
 
-// Shared pipeline for CI-pushed and app-side reports. Store and Jira client are injected so the
-// pipeline runs against the file store and a fake Jira in tests.
-// Only the secret rule redacts its excerpt; another rule matching the same line would expose the value.
+const redactCredentials = (excerpt) => (typeof excerpt === 'string' ? excerpt.replace(CREDENTIAL_VALUE, '$1[REDACTED]$2') : excerpt);
+
+// Every finding on a line that holds a secret gets the SEC001 excerpt with every quoted value masked,
+// so neither another rule's excerpt nor a second credential on the same line can leak.
 export function redactSecretLines(report) {
   const secretExcerpts = new Map();
   for (const finding of report.findings ?? []) {
-    if (finding.ruleId === SECRET_RULE) secretExcerpts.set(`${finding.file}:${finding.line}`, finding.excerpt);
+    if (finding.ruleId === SECRET_RULE) secretExcerpts.set(`${finding.file}:${finding.line}`, redactCredentials(finding.excerpt));
   }
   return {
     ...report,
     findings: (report.findings ?? []).map((finding) => {
       const redacted = secretExcerpts.get(`${finding.file}:${finding.line}`);
-      return redacted !== undefined && finding.ruleId !== SECRET_RULE ? { ...finding, excerpt: redacted } : finding;
+      return redacted !== undefined ? { ...finding, excerpt: redacted } : finding;
     })
   };
 }
 
-// Records are keyed per project (one repo per project), so a fork linked to another project
-// never overwrites the original repository's tracking record.
 export const recordKey = (projectKey, fingerprint) => `${projectKey}:${fingerprint}`;
 
-export async function processReport(rawReport, repo, { source, commit = null, store, jira, now = () => new Date().toISOString() }) {
+const storedFinding = ({ fingerprint, ruleId, title, severity, category, message, file, line, column, excerpt }, issueKey) => ({
+  fingerprint, ruleId, title, severity, category, message, file, line, column,
+  excerpt: typeof excerpt === 'string' ? excerpt.slice(0, MAX_STORED_EXCERPT) : excerpt,
+  issueKey
+});
+
+export function fitLatestScan(scan, findings, maxBytes = MAX_STORED_SCAN_BYTES) {
+  let kept = findings.slice(0, MAX_STORED_FINDINGS);
+  let stored = { ...scan, findings: kept, truncated: kept.length < findings.length };
+  while (kept.length && Buffer.byteLength(JSON.stringify(stored)) > maxBytes) {
+    kept = kept.slice(0, Math.floor(kept.length * 0.8));
+    stored = { ...scan, findings: kept, truncated: true };
+  }
+  return stored;
+}
+
+const isOlder = (commitTime, previous) => Boolean(commitTime && previous?.commitTime && Date.parse(commitTime) < Date.parse(previous.commitTime));
+
+export async function processReport(rawReport, repo, { source, commit = null, commitTime = null, store, jira, now = () => new Date().toISOString() }) {
   const report = redactSecretLines(rawReport);
   const { repoUrl, projectKey } = repo;
+  const previousScan = await store.getLatestScan(projectKey);
+  // A report for an older commit arriving late must not roll back state from a newer one.
+  if (previousScan?.repoUrl === repoUrl && isOlder(commitTime, previousScan)) {
+    return { created: 0, resolved: 0, unchanged: 0, errors: [], stale: true };
+  }
+
   const timestamp = now();
-  const records = (await store.allFingerprintRecords()).filter((record) => record.repoUrl === repoUrl && record.projectKey === projectKey);
+  const allRecords = await store.allFingerprintRecords();
+  const records = allRecords.filter((record) => record.repoUrl === repoUrl && record.projectKey === projectKey);
+  // Issues still tracked for a previously linked repo in this project are never adopted for this repo.
+  const foreignIssueKeys = new Set(allRecords
+    .filter((record) => record.projectKey === projectKey && record.repoUrl !== repoUrl && record.status === 'open')
+    .map((record) => record.issueKey));
   const openRecords = records.filter((record) => record.status === 'open');
   const diff = diffReports(openRecords, report);
   const result = { created: 0, resolved: 0, unchanged: diff.unchanged.length, errors: [] };
@@ -38,8 +71,10 @@ export async function processReport(rawReport, repo, { source, commit = null, st
 
   for (const finding of diff.toCreate) {
     try {
-      const issue = await jira.findIssueByFingerprint(projectKey, finding.fingerprint)
-        ?? await jira.createIssue(projectKey, buildIssuePayload(finding), repo.issueType ?? 'Bug');
+      const found = await jira.findIssueByFingerprint(projectKey, finding.fingerprint);
+      const issue = found && !foreignIssueKeys.has(found.issueKey)
+        ? found
+        : await jira.createIssue(projectKey, buildIssuePayload(finding), repo.issueType ?? 'Bug');
       await store.setFingerprint(recordKey(projectKey, finding.fingerprint), {
         fingerprint: finding.fingerprint,
         repoUrl,
@@ -62,10 +97,12 @@ export async function processReport(rawReport, repo, { source, commit = null, st
     }
   }
 
-  // A scan that stopped at the file cap (or a truncated GitHub tree) can't prove a finding is gone.
+  // A file that was skipped (too large, binary, ...) proves nothing about the findings it used to contain.
+  const skippedFiles = new Set((report.skipped ?? []).map((item) => item.path ?? item.file).filter(Boolean));
   const partial = report.meta?.hitFileLimit === true;
   for (const fingerprint of partial ? [] : diff.toResolve) {
     const record = openRecords.find((item) => item.fingerprint === fingerprint);
+    if (skippedFiles.has(record.file)) continue;
     try {
       const transitioned = await jira.transitionToDone(record.issueKey);
       if (!transitioned) {
@@ -86,23 +123,21 @@ export async function processReport(rawReport, repo, { source, commit = null, st
     await store.setFingerprint(recordKey(projectKey, finding.fingerprint), { ...record, line: finding.line, lastSeenAt: timestamp });
   }
 
-  const previousScan = await store.getLatestScan(projectKey);
-  const findings = (report.findings ?? []).map((finding) => ({ ...finding, issueKey: issueKeys.get(finding.fingerprint) ?? null }));
-  await store.setLatestScan(projectKey, {
+  const findings = (report.findings ?? []).map((finding) => storedFinding(finding, issueKeys.get(finding.fingerprint) ?? null));
+  await store.setLatestScan(projectKey, fitLatestScan({
     repoUrl,
     source,
     commit,
+    commitTime,
     receivedAt: timestamp,
     meta: report.meta ?? {},
     summary: report.summary,
-    findings: findings.slice(0, MAX_STORED_FINDINGS),
-    truncated: findings.length > MAX_STORED_FINDINGS,
     delta: summarizeDelta(previousScan, report),
     previousSummary: previousScan?.summary ?? null,
     result: { created: result.created, resolved: result.resolved, unchanged: result.unchanged, errors: result.errors.length }
-  });
+  }, findings));
 
-  await updateRepoLastScan(store, repoUrl, {
+  await setLastScan(store, repo, {
     at: timestamp,
     source,
     commit,
@@ -118,13 +153,13 @@ export async function processReport(rawReport, repo, { source, commit = null, st
   return result;
 }
 
-async function updateRepoLastScan(store, repoUrl, lastScan) {
+// Writes only the per-project lastScan key, so settings saved while a scan runs are never overwritten.
+export async function setLastScan(store, { repoUrl, projectKey }, lastScan) {
   const repos = (await store.getConfig('repos')) ?? [];
-  if (!repos.some((repo) => repo.repoUrl === repoUrl)) return;
-  await store.setConfig('repos', repos.map((repo) => (repo.repoUrl === repoUrl ? { ...repo, lastScan } : repo)));
+  if (!repos.some((repo) => repo.repoUrl === repoUrl && repo.projectKey === projectKey)) return;
+  await store.setConfig(lastScanKey(projectKey), lastScan);
 }
 
-// Jira error messages may echo request content; only the operation and HTTP status are surfaced.
 function safeMessage(error) {
   return error?.status ? `Jira request failed with HTTP ${error.status}` : 'Jira request failed';
 }

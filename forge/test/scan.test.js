@@ -40,7 +40,7 @@ test('app scan of the sample matches the CLI scan and creates issues with source
   assert.deepEqual(latest.summary.severityCounts, cli.summary.severityCounts);
   assert.deepEqual(latest.findings.map((f) => f.fingerprint).sort(), cli.findings.map((f) => f.fingerprint).sort());
   assert.deepEqual(latest.findings.map(({ issueKey, ...f }) => f).sort((a, b) => a.fingerprint.localeCompare(b.fingerprint)),
-    cli.findings.sort((a, b) => a.fingerprint.localeCompare(b.fingerprint)));
+    cli.findings.map(({ remediation, ...f }) => f).sort((a, b) => a.fingerprint.localeCompare(b.fingerprint)));
   assert.equal(step.result.created, cli.summary.severityCounts.critical + cli.summary.severityCounts.high);
   assert.equal(await store.getScanState(REPO.repoUrl), null);
 });
@@ -107,4 +107,26 @@ test('a run replaced mid-scan does not publish its results', async () => {
   assert.equal(step.status, 'superseded');
   assert.equal(await store.getLatestScan('SEC'), null);
   assert.equal((await store.getScanState(REPO.repoUrl)).runId, 'newer');
+});
+
+test('checkpoints never hold a raw secret, even in other rules\' excerpts', async () => {
+  const line = 'fetch("http://api.example.com", { token: "tok_live_raw_value_1", password: "second_raw_value_2" })\n';
+  const files = Array.from({ length: 45 }, (_, i) => ({ path: `f${i}.js`, content: i < 5 ? line : 'const x = 1;\n' }));
+  const store = await tempForgeLikeStore();
+  const writes = [];
+  const setScanState = store.setScanState.bind(store);
+  store.setScanState = async (key, value) => { writes.push(JSON.stringify(value)); return setScanState(key, value); };
+  let ticks = 0;
+  const step = await runScanStep(REPO, { store, jira: fakeJira(), github: fakeGitHub(files), clock: () => (ticks += 10), budgetMs: 25 });
+
+  assert.equal(step.status, 'continued');
+  assert.ok(writes.some((w) => w.includes('[REDACTED]')));
+  assert.ok(writes.every((w) => !w.includes('tok_live_raw_value_1') && !w.includes('second_raw_value_2')));
+});
+
+test('app scans record the commit time used to order reports', async () => {
+  const store = await tempForgeLikeStore();
+  const github = { ...fakeGitHub(sampleFiles), resolveHead: async () => ({ branch: 'main', commit: 'c0ffee', commitTime: '2026-11-20T00:00:00Z' }) };
+  await runScanStep(REPO, { store, jira: fakeJira(), github });
+  assert.equal((await store.getLatestScan('SEC')).commitTime, '2026-11-20T00:00:00Z');
 });

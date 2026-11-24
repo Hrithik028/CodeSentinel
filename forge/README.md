@@ -49,10 +49,11 @@ Send `POST <ingest-trigger URL>` with the `--json` report as the body and these 
 | `X-Scan-Token` | Token shown once on the project config page |
 | `X-Repo` | `owner/repo` or `https://github.com/owner/repo`; must be linked to that token |
 | `X-Commit` | Commit SHA (optional, shown on the gadget) |
+| `X-Commit-Time` | Commit time, ISO 8601 (optional, e.g. `git log -1 --format=%cI`). Reports older than the latest stored one are ignored |
 
 | Status | When |
 | --- | --- |
-| `200` | Report processed. Body: `{"created":n,"resolved":n,"unchanged":n,"errors":[{fingerprint,operation,message}]}` |
+| `200` | Report processed. Body: `{"created":n,"resolved":n,"unchanged":n,"errors":[{fingerprint,operation,message}]}`, plus `"stale":true` if it was for an older commit and was not applied |
 | `405` | Method is not `POST` |
 | `413` | Body is larger than 1 MB |
 | `401` | Missing or unknown token |

@@ -30,3 +30,29 @@ test('issue description survives the ADF round trip with its fingerprint', () =>
   assert.ok(adf.content.some((node) => node.type === 'codeBlock'));
   assert.equal(extractFingerprint(adfToText(adf)), finding.fingerprint);
 });
+
+test('pickIssueType falls back when the project has no Bug type', async () => {
+  const { pickIssueType } = await import('../src/jira.js');
+  const types = [{ id: '1', name: 'Epic', hierarchyLevel: 1 }, { id: '2', name: 'Sub-task', subtask: true }, { id: '3', name: 'Story', hierarchyLevel: 0 }, { id: '4', name: 'Task', hierarchyLevel: 0 }];
+  assert.equal(pickIssueType([...types, { id: '5', name: 'Bug' }], 'bug').id, '5');
+  assert.equal(pickIssueType(types, 'Bug').id, '4');
+  assert.equal(pickIssueType(types.filter((t) => t.name !== 'Task'), 'Bug').id, '3');
+  assert.equal(pickIssueType(types, '3').id, '3');
+  assert.equal(pickIssueType([], 'Bug'), null);
+});
+
+test('clearing the PAT clears the checkpoint; lastScan lives outside the repos list', async () => {
+  const { createConfigService } = await import('../src/configService.js');
+  const { tempForgeLikeStore } = await import('./helpers.js');
+  const store = await tempForgeLikeStore();
+  const config = createConfigService({ store });
+  await config.saveRepo('SEC', { repoUrl: 'https://github.com/Hrithik028/codesentinel-demo', pat: 'github_pat_x' });
+  await store.setScanState('https://github.com/Hrithik028/codesentinel-demo', { runId: 'r1' });
+  await store.setConfig('lastScan:SEC', { status: 'ok', score: 90 });
+
+  assert.equal((await config.getProjectConfig('SEC')).lastScan.score, 90);
+  await config.clearPat('SEC');
+  assert.equal(await store.getScanState('https://github.com/Hrithik028/codesentinel-demo'), null);
+  await config.saveRepo('SEC', { repoUrl: 'https://github.com/Hrithik028/other' });
+  assert.equal(await store.getConfig('lastScan:SEC'), null);
+});

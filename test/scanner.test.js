@@ -41,6 +41,16 @@ test('redacts secrets from report excerpts', async () => {
   });
 });
 
+test('redacts every secret on a line', async () => {
+  await withFixture({ 'config.js': `const conf = { password: 'first-secret-value', apiKey: 'second-secret-value' };` }, async (directory) => {
+    const report = await scanDirectory(directory);
+    assert.ok(report.findings.length >= 1);
+    for (const finding of report.findings) {
+      assert.doesNotMatch(finding.excerpt, /first-secret-value|second-secret-value/);
+    }
+  });
+});
+
 test('ignores dependency folders and unsupported files', async () => {
   await withFixture({
     'safe.js': `const greeting = 'hello';`,

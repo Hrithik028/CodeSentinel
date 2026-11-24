@@ -42,7 +42,7 @@ export function createGitHubClient({ fetch, pat }) {
       const info = await request('getRepository', repoPath(owner, repo));
       const branch = info.default_branch;
       const ref = await request('getBranch', `${repoPath(owner, repo)}/branches/${encodeURIComponent(branch)}`);
-      return { branch, commit: ref.commit.sha };
+      return { branch, commit: ref.commit.sha, commitTime: ref.commit.commit?.committer?.date ?? null };
     },
 
     // Deterministic for a given commit, so a resumed scan re-lists instead of checkpointing the file list.

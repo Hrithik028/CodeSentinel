@@ -1,5 +1,8 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
+// Last-scan status lives under its own key so scans never rewrite the shared repos list.
+export const lastScanKey = (projectKey) => `lastScan:${projectKey}`;
+
 export function hashToken(token) {
   return createHash('sha256').update(String(token)).digest('hex');
 }

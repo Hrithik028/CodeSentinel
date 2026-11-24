@@ -29,6 +29,14 @@ processReport(report, repo, { source, commit })
   return { created, resolved, unchanged, errors[] }
 ```
 
+Guards (follow-up to the PR #19 review):
+
+- **Stale reports:** CI may send `X-Commit-Time` (ISO 8601, e.g. `git log -1 --format=%cI`); app scans use the branch head's committer date. A report whose commit time is older than the stored latest scan's is acknowledged (`200`, `"stale": true`) but not applied.
+- **Partial coverage:** nothing is resolved when `meta.hitFileLimit` is set (including when the skipped list was capped), and findings in a file listed in `skipped` (e.g. grown past 1 MB) stay open.
+- **Repo relinks:** a JQL match is only adopted if it isn't an open issue tracked for another repo previously linked to the project.
+- **Issue type:** `createIssue` reads the project's issue types and uses the configured one (default `Bug`) when present, otherwise `Task`, otherwise the first standard type.
+- **Redaction:** every finding on a line with a SEC001 match gets the SEC001 excerpt with every quoted value masked, in Jira, the latest scan and app-scan checkpoints.
+
 Per-issue Jira failures are collected in `errors[]` and do not abort the run; a failed create leaves no `fp:` record, so the next scan retries it. Only `critical` and `high` findings create issues (`ISSUE_SEVERITIES`); medium/low findings are visible on the gadget only.
 
 Issue format (from `buildIssuePayload`):
@@ -61,7 +69,7 @@ Scopes: `read:jira-work`, `write:jira-work`, `storage:app`. Egress (`external.fe
 1. `GET /repos/{owner}/{repo}` → default branch; `GET /repos/{owner}/{repo}/git/trees/{branch}?recursive=1`.
 2. Keep blobs with `size ≤ 1 MB`, an extension in `scannableExtensions()`, and no ignored directory segment (`node_modules`, `.git`, `dist`, …); cap at 5000 files.
 3. Fetch blobs 20 at a time (`GET /git/blobs/{sha}`), base64-decode, skip content containing `\u0000`, run `scanContent()`.
-4. After ~20 s of work, persist `scanstate:{repoUrl}` (`cursor`, partial findings, counters) and push an async event to resume; the final step assembles the report (`meta.source = 'app'`) and calls `processReport()`.
+4. After ~20 s of work, persist `scanstate:{repoUrl}` (`cursor`, partial redacted findings, counters) and push an async event to resume. If the PAT was removed meanwhile, the resumed step clears the checkpoint and stops; the final step assembles the report (`meta.source = 'app'`) and calls `processReport()`.
 
 ## Data and security
 
