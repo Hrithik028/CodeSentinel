@@ -19,6 +19,7 @@ Record every manual or end-to-end verification here: date, environment, steps, r
 | 2026-11-24 | Production deploy | `production` | `forge variables set --encrypt LLM_API_KEY`, `forge deploy -e production` | Pass: v2.0.0 deployed | CLI output |
 | 2026-11-24 | CI ingest (demo site) | `development` on one-atlas-cieg, project SEC | codesentinel-demo Actions run 44747991711 with fresh `SCAN_TOKEN` | Pass: `{"created":5,"resolved":0,"unchanged":0}`; rerun `{"created":0,"unchanged":5}` (no duplicates) | Actions log |
 | 2026-11-24 | Rovo agent (demo site) | `development` on one-atlas-cieg | Rovo chat → CodeSentinel Security Analyst: "What is the security posture of SEC?", "List open critical findings" | Pass: F / 25, 5 open, severity counts; SEC-1 SEC001 with redacted excerpt | `docs/screenshots/rovo-posture-demo-site.png`, `docs/screenshots/rovo-findings-demo-site.png` |
+| 2026-11-24 | `rovo:mcp` in Rovo Studio | `development` on one-atlas-cieg | Studio → new agent → Add tools → Connected apps → CodeSentinel | Pass: `Get security posture` and `List open findings` listed as tools | `docs/screenshots/rovo-mcp-studio-tools.png` |
 
 ## Pending end-to-end runs
 
