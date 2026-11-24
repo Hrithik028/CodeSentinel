@@ -107,6 +107,8 @@ export async function processReport(rawReport, repo, { source, commit = null, st
     source,
     commit,
     status: result.errors.length ? 'partial' : 'ok',
+    score: report.summary?.score ?? null,
+    grade: report.summary?.grade ?? null,
     created: result.created,
     resolved: result.resolved,
     unchanged: result.unchanged,

@@ -11,7 +11,7 @@ modules:
   jira:projectPage:
     - key: config-page
       title: CodeSentinel
-      resource: config
+      resource: main
       resolver:
         function: scan-now-fn
   jira:dashboardGadget:
@@ -19,11 +19,11 @@ modules:
       title: CodeSentinel Security Posture
       description: Security score, severity counts and open findings for a linked repository.
       thumbnail: https://raw.githubusercontent.com/Hrithik028/CodeSentinel/main/public/favicon.svg
-      resource: gadget
+      resource: main
       resolver:
         function: scan-now-fn
       edit:
-        resource: gadget
+        resource: main
   jira:issueAction:
     - key: suggest-fix
       title: Suggest fix
@@ -100,10 +100,8 @@ modules:
     - key: rovo-findings-fn
       handler: index.rovoFindings
 resources:
-  - key: config
-    path: static/config/build
-  - key: gadget
-    path: static/gadget/build
+  - key: main
+    path: static/ui/build
   - key: suggest-fix
     path: static/suggest-fix/build
 app:
