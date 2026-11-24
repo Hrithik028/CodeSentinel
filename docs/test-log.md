@@ -15,6 +15,8 @@ Record every manual or end-to-end verification here: date, environment, steps, r
 | 2026-11-20 | MCP (live) | `mcp-trigger` | No token; `initialize`; `tools/list`; `tools/call` both tools; MCP Inspector CLI `tools/list` | 401; all 200 with expected payloads; Inspector lists both tools | curl + `npx @modelcontextprotocol/inspector --cli` |
 | 2026-11-20 | Suggest fix (live) | SEC-1, OpenAI | Issue action → Suggest fix | Advisory comment posted; excerpt redacted; status unchanged | ![suggest fix](screenshots/suggest-fix-live.png) |
 | 2026-11-20 | Dashboard gadget (live) | dashboard `CodeSentinel`, project SEC | Add gadget → select SEC | Grade F 25/100, severity counts, CI badge, delta, findings with issue links | ![gadget](screenshots/gadget-live.png) |
+| 2026-11-24 | `rovo:mcp` + demo site | `development` on one-atlas-cieg.atlassian.net (Forge demo site, Rovo Enterprise) | `forge lint`, `forge deploy`, `forge install --demo-site` | Pass: lint clean, v4.2.0 installed | `forge install list` |
+| 2026-11-24 | Production deploy | `production` | `forge variables set --encrypt LLM_API_KEY`, `forge deploy -e production` | Pass: v2.0.0 deployed | CLI output |
 
 ## Pending end-to-end runs
 

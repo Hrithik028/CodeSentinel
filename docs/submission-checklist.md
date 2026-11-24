@@ -15,15 +15,16 @@ Category: **Apps for Software Teams**. Bonuses claimed: **Marketplace**, **Rovo 
 
 ## Release
 
-- [ ] `forge deploy -e production` done, with the production LLM key set (`forge variables set -e production --encrypt LLM_API_KEY …`)
+- [x] `forge deploy -e production` done, with the production LLM key set (`forge variables set -e production --encrypt LLM_API_KEY …`)
 - [ ] Distribution: sharing enabled; judge install link generated and recorded in `judge-setup.md`
-- [ ] Marketplace listing submitted; review ticket link recorded below
+- [ ] Marketplace listing submitted (copy in `docs/release/marketplace-listing.md`); review ticket link recorded below
 - [ ] Clean-site E2E for both paths logged in `test-log.md`
 - [ ] Tag `v2.0.0-forge` pushed; CS-1..CS-8 closed; milestone `codegeist-2026` closed
 
 ## Devpost
 
 - [ ] Public YouTube video under 5 minutes, following `demo-script.md`
+- [ ] Devpost text pasted from `docs/release/devpost.md`
 - [ ] Category: Apps for Software Teams
 - [ ] Bonus checkboxes: Marketplace, Rovo, Atlassian MCP
 - [ ] Technical explanation: architecture (ADR 0001), dedup (ADR 0002), security (ADR 0003), bonus scope (ADR 0004)

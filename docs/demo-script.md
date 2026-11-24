@@ -1,6 +1,6 @@
 # Demo script (< 5 minutes)
 
-Target length: 4:30. Record at 1080p, with Jira in a clean browser profile. Have three tabs open: Jira dashboard, GitHub `codesentinel-demo`, and Rovo chat.
+Target length: 4:30. Record at 1080p, with Jira in a clean browser profile. Have three tabs open: Jira dashboard, GitHub `codesentinel-demo`, and Rovo chat. Record on the Forge demo site (`forge site provision`), which includes Rovo.
 
 | Time | Screen | Narration / action |
 | --- | --- | --- |
@@ -13,6 +13,6 @@ Target length: 4:30. Record at 1080p, with Jira in a clean browser profile. Have
 | 2:45–3:15 | Jira dashboard gadget | Score/grade badge (F → better), severity counts, findings table with issue links, delta vs. the previous scan, and the `CI` source badge. Click **Scan now** on the config page; the badge switches to `App` (app-side GitHub scan, no CI needed). |
 | 3:15–3:45 | Open a high issue → **Suggest fix** | An LLM comment appears: "AI-generated suggestion (advisory only) …". Note that it is opt-in and sends only the rule and the redacted excerpt. |
 | 3:45–4:10 | Rovo chat | "What's the security posture of SEC?" then "List open critical findings". The **CodeSentinel Security Analyst** agent answers using the `getSecurityPosture` and `listOpenFindings` actions. |
-| 4:10–4:30 | MCP Inspector | `tools/list` shows `get_security_posture` and `list_open_findings`; run one. Close: "Runs on Forge, listed on Marketplace, works from CI or without it." |
+| 4:10–4:30 | Rovo Studio, then MCP Inspector | Create an agent and add the **CodeSentinel MCP** tools (`rovo:mcp`). Then MCP Inspector: `tools/list` shows `get_security_posture` and `list_open_findings`; run one. Close: "Runs on Forge, listed on Marketplace, works from CI or without it." |
 
 Backup plan: if a live step fails, cut to the pre-recorded clip of the same step from the rehearsal (keep one take of each step in `recordings/`, not committed).

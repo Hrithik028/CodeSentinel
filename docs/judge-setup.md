@@ -1,10 +1,10 @@
 # Judge setup
 
-Time required: about 10 minutes. You need a Jira Cloud site where you are a site admin. A free developer site from <http://go.atlassian.com/cloud-dev> works.
+Time required: about 10 minutes. You need a Jira Cloud site where you are a site admin. To try the Rovo agent and Rovo MCP tools, use a site with Rovo, such as the free Forge demo site from `forge site provision` (includes Rovo Enterprise).
 
 ## 1. Install the app
 
-1. Open the install link: **_TBD: added at release (CS-8)_**.
+1. Open the install link: **_pending: generated on the Distribution page of the production app_**.
 2. Choose your Jira site and click **Get app**. The app asks for read and write access to Jira work items and app storage, and for egress to `api.github.com` and the LLM host.
 
 ## 2. Create a project
