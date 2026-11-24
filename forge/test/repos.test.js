@@ -32,7 +32,7 @@ test('issue description survives the ADF round trip with its fingerprint', () =>
 });
 
 test('pickIssueType falls back when the project has no Bug type', async () => {
-  const { pickIssueType } = await import('../src/jira.js');
+  const { pickIssueType } = await import('../src/issueTypes.js');
   const types = [{ id: '1', name: 'Epic', hierarchyLevel: 1 }, { id: '2', name: 'Sub-task', subtask: true }, { id: '3', name: 'Story', hierarchyLevel: 0 }, { id: '4', name: 'Task', hierarchyLevel: 0 }];
   assert.equal(pickIssueType([...types, { id: '5', name: 'Bug' }], 'bug').id, '5');
   assert.equal(pickIssueType(types, 'Bug').id, '4');
