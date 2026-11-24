@@ -1,4 +1,4 @@
-import Resolver from '@forge/resolver';
+import resolverModule from '@forge/resolver';
 import { fetch, webTrigger } from '@forge/api';
 import { Queue } from '@forge/events';
 import { smokeTest } from './smoke.js';
@@ -15,6 +15,8 @@ import { createLlmClient, createSuggestFix } from './suggestFix.js';
 import { addComment } from './jira.js';
 import { readIssueAsUser } from './issues.js';
 
+// @forge/resolver is CommonJS; under "type": "module" its default import is module.exports.
+const Resolver = resolverModule.default ?? resolverModule;
 const store = createForgeStore();
 const queue = new Queue({ key: 'scan-queue' });
 

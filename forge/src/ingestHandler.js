@@ -22,7 +22,7 @@ export function createIngestHandler({ store, jira, log = console }) {
     if (Buffer.byteLength(body, 'utf8') > MAX_BODY_BYTES) return respond(413, { error: 'Report exceeds 1 MB' });
 
     const repos = (await store.getConfig('repos')) ?? [];
-    const token = header(event, 'x-scan-token');
+    const token = header(event, 'x-scan-token')?.trim();
     const tokenRepos = repos.filter((repo) => tokenMatches(token, repo.scanTokenHash));
     if (!tokenRepos.length) return respond(401, { error: 'Invalid scan token' });
 
