@@ -1,0 +1,122 @@
+modules:
+  webtrigger:
+    - key: ingest-trigger
+      function: ingest-fn
+      response:
+        type: dynamic
+    - key: mcp-trigger
+      function: mcp-fn
+      response:
+        type: dynamic
+  jira:projectPage:
+    - key: config-page
+      title: CodeSentinel
+      resource: config
+      resolver:
+        function: scan-now-fn
+  jira:dashboardGadget:
+    - key: posture-gadget
+      title: CodeSentinel Security Posture
+      description: Security score, severity counts and open findings for a linked repository.
+      thumbnail: https://raw.githubusercontent.com/Hrithik028/CodeSentinel/main/public/favicon.svg
+      resource: gadget
+      resolver:
+        function: scan-now-fn
+      edit:
+        resource: gadget
+  jira:issueAction:
+    - key: suggest-fix
+      title: Suggest fix
+      resource: suggest-fix
+      resolver:
+        function: suggest-fix-fn
+  scheduledTrigger:
+    - key: hourly-rescan
+      function: rescan-fn
+      interval: hour
+  consumer:
+    - key: scan-consumer
+      queue: scan-queue
+      function: scan-worker-fn
+  action:
+    - key: get-security-posture
+      name: Get security posture
+      function: rovo-posture-fn
+      actionVerb: GET
+      description: Returns the latest CodeSentinel score, grade, severity counts and delta for a Jira project.
+      inputs:
+        projectKey:
+          title: Project key
+          type: string
+          required: false
+          description: Jira project key, for example SEC. Omit to summarise every linked project.
+    - key: list-open-findings
+      name: List open findings
+      function: rovo-findings-fn
+      actionVerb: GET
+      description: Lists open CodeSentinel findings with severity, rule, location and Jira issue key.
+      inputs:
+        projectKey:
+          title: Project key
+          type: string
+          required: false
+          description: Jira project key. Omit for all linked projects.
+        severity:
+          title: Severity
+          type: string
+          required: false
+          description: Filter by severity (critical, high, medium or low).
+  rovo:agent:
+    - key: codesentinel-agent
+      name: CodeSentinel Security Analyst
+      description: Answers questions about the security posture of repositories linked to Jira projects.
+      prompt: >
+        You are the CodeSentinel Security Analyst. Use the get-security-posture action for scores,
+        grades and trends, and list-open-findings for specific vulnerabilities. Always cite Jira issue keys,
+        files and lines from the action results, never invent findings, and remind users that findings come
+        from static pattern analysis and may be false positives.
+      conversationStarters:
+        - What is the security posture of my project?
+        - List open critical findings
+        - What changed since the previous scan?
+      actions:
+        - get-security-posture
+        - list-open-findings
+  function:
+    - key: ingest-fn
+      handler: index.ingest
+    - key: mcp-fn
+      handler: index.mcp
+    - key: scan-now-fn
+      handler: index.resolver
+    - key: rescan-fn
+      handler: index.rescan
+    - key: scan-worker-fn
+      handler: index.scanWorker
+    - key: suggest-fix-fn
+      handler: index.suggestFix
+    - key: rovo-posture-fn
+      handler: index.rovoPosture
+    - key: rovo-findings-fn
+      handler: index.rovoFindings
+resources:
+  - key: config
+    path: static/config/build
+  - key: gadget
+    path: static/gadget/build
+  - key: suggest-fix
+    path: static/suggest-fix/build
+app:
+  id: ari:cloud:ecosystem::app/00000000-0000-0000-0000-000000000000
+  runtime:
+    name: nodejs22.x
+permissions:
+  scopes:
+    - read:jira-work
+    - write:jira-work
+    - storage:app
+  external:
+    fetch:
+      backend:
+        - address: api.github.com
+        - address: api.openai.com
