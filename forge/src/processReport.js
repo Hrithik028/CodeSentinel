@@ -59,6 +59,11 @@ export async function processReport(rawReport, repo, { source, commit = null, co
   }
 
   const timestamp = now();
+  // A file that was skipped (too large, binary, ...) proves nothing about the findings it used to contain.
+  // `skipped` is not schema-validated, so it is read defensively before any Jira write.
+  const skippedFiles = new Set((Array.isArray(report.skipped) ? report.skipped : [])
+    .map((item) => item?.path ?? item?.file)
+    .filter((path) => typeof path === 'string'));
   const allRecords = await store.allFingerprintRecords();
   const records = allRecords.filter((record) => record.repoUrl === repoUrl && record.projectKey === projectKey);
   // Issues still tracked for a previously linked repo in this project are never adopted for this repo.
@@ -98,8 +103,6 @@ export async function processReport(rawReport, repo, { source, commit = null, co
     }
   }
 
-  // A file that was skipped (too large, binary, ...) proves nothing about the findings it used to contain.
-  const skippedFiles = new Set((report.skipped ?? []).map((item) => item.path ?? item.file).filter(Boolean));
   const partial = report.meta?.hitFileLimit === true;
   for (const fingerprint of partial ? [] : diff.toResolve) {
     const record = openRecords.find((item) => item.fingerprint === fingerprint);

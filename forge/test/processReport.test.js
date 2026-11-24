@@ -255,3 +255,12 @@ test('a credential cut off by the excerpt limit is still redacted', () => {
   const { findings } = redactSecretLines({ findings: [{ ruleId: 'SEC001', file: 'a.js', line: 1, excerpt }, { ruleId: 'SEC004', file: 'a.js', line: 1, excerpt }] });
   assert.ok(findings.every((f) => !f.excerpt.includes('tok_live_cut_off') && f.excerpt.endsWith('[REDACTED]')));
 });
+
+test('malformed skipped data cannot abort a report halfway', async () => {
+  for (const skipped of [{ path: 'x' }, 'x', [null, 5, { path: 7 }]]) {
+    const store = await tempStore();
+    const result = await processReport({ ...fixture('scan-a.json'), skipped }, REPO, { source: 'ci', store, jira: fakeJira() });
+    assert.ok(result.created > 0);
+    assert.ok(await store.getLatestScan('SEC'));
+  }
+});
