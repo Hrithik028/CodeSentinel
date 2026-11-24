@@ -6,6 +6,7 @@ import Spinner from '@atlaskit/spinner';
 import ConfigPage from './ConfigPage.jsx';
 import Gadget from './Gadget.jsx';
 import GadgetEdit from './GadgetEdit.jsx';
+import SuggestFix from './SuggestFix.jsx';
 
 function App() {
   const [context, setContext] = useState(null);
@@ -15,6 +16,7 @@ function App() {
   }, []);
   if (!context) return <Spinner size="medium" />;
   if (context.moduleKey === 'config-page') return <ConfigPage context={context} />;
+  if (context.moduleKey === 'suggest-fix') return <SuggestFix />;
   if (context.extension?.entryPoint === 'edit') return <GadgetEdit context={context} />;
   return <Gadget context={context} />;
 }

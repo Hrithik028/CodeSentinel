@@ -45,6 +45,7 @@ export default function ConfigPage({ context }) {
   const [busy, setBusy] = useState(null);
   const [message, setMessage] = useState(null);
   const [token, setToken] = useState(null);
+  const [mcpToken, setMcpToken] = useState(null);
 
   useEffect(() => {
     if (data?.repo) {
@@ -59,6 +60,7 @@ export default function ConfigPage({ context }) {
     try {
       const result = await invoke(name, { projectKey, ...payload });
       if (result?.scanToken) setToken(result.scanToken);
+      if (result?.mcpToken) setMcpToken(result.mcpToken);
       setMessage({ appearance: 'success', text: success });
       setPat('');
       await reload();
@@ -122,6 +124,26 @@ export default function ConfigPage({ context }) {
           <div style={{ display: 'flex', gap: 8 }}>
             <Button onClick={() => run('rotateScanToken', {}, 'New scan token generated. Update the SCAN_TOKEN secret.')} isLoading={busy === 'rotateScanToken'}>Regenerate scan token</Button>
             <Button appearance="danger" onClick={() => run('unlinkRepo', {}, 'Repository unlinked.')} isLoading={busy === 'unlinkRepo'}>Unlink repository</Button>
+          </div>
+        </>
+      )}
+
+      {data.mcp?.canManage && (
+        <>
+          <h3 style={{ marginTop: 24 }}>MCP access (site-wide)</h3>
+          <p style={help}>Lets MCP clients such as Claude or Cursor read posture and open findings for every linked project. Endpoint: <code style={{ wordBreak: 'break-all' }}>{data.mcp.url}</code></p>
+          {mcpToken && (
+            <SectionMessage appearance="warning" title="Copy your MCP token now. It won't be shown again.">
+              <p>Send it as <code>Authorization: Bearer {mcpToken}</code></p>
+              <Button onClick={() => navigator.clipboard?.writeText(mcpToken)}>Copy token</Button>{' '}
+              <Button appearance="subtle" onClick={() => setMcpToken(null)}>I've saved it</Button>
+            </SectionMessage>
+          )}
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <Button onClick={() => run('rotateMcpToken', {}, 'New MCP token generated. Clients using the old one will stop working.')} isLoading={busy === 'rotateMcpToken'}>
+              {data.mcp.enabled ? 'Regenerate MCP token' : 'Enable MCP access'}
+            </Button>
+            {data.mcp.enabled && <Button appearance="danger" onClick={() => run('revokeMcpToken', {}, 'MCP access disabled.')} isLoading={busy === 'revokeMcpToken'}>Disable</Button>}
           </div>
         </>
       )}
