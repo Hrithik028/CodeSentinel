@@ -1,5 +1,11 @@
 # MCP tools
 
+## Rovo MCP module
+
+The `rovo:mcp` module `codesentinel-mcp` (name "CodeSentinel MCP") exposes the `get-security-posture` and `list-open-findings` actions as tools. Customers add them to their own agents in Rovo Studio or connect them to MCP-compatible clients through the Rovo MCP server. They use the same functions and per-user project filtering as the Rovo agent.
+
+## Web trigger MCP server
+
 CodeSentinel exposes a minimal [Model Context Protocol](https://modelcontextprotocol.io) server over the Forge web trigger `mcp-trigger` (function `mcp-fn`). It speaks JSON-RPC 2.0 over HTTP POST (Streamable HTTP transport, JSON responses only, no SSE).
 
 ## Endpoint and auth

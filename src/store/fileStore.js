@@ -36,7 +36,7 @@ export class FileStore {
   }
 
   setFingerprint(fingerprint, record) {
-    return this.update((state) => { state.fingerprints[fingerprint] = { ...record, fingerprint }; });
+    return this.update((state) => { state.fingerprints[fingerprint] = { fingerprint, ...record }; });
   }
 
   async allFingerprintRecords() {

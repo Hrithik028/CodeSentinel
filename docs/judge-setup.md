@@ -1,10 +1,10 @@
 # Judge setup
 
-Time required: about 10 minutes. You need a Jira Cloud site where you are a site admin. A free developer site from <http://go.atlassian.com/cloud-dev> works.
+Time required: about 10 minutes. You need a Jira Cloud site where you are a site admin. To try the Rovo agent and Rovo MCP tools, use a site with Rovo, such as the free Forge demo site from `forge site provision` (includes Rovo Enterprise).
 
 ## 1. Install the app
 
-1. Open the install link: **_TBD: added at release (CS-8)_**.
+1. Open the [CodeSentinel install link](https://developer.atlassian.com/console/install/2b37e8b5-d95c-4b0f-9141-98ee30b14cde?signature=AYABeASxd2JovLx5eUyq1bJv93kAAAADAAdhd3Mta21zAEthcm46YXdzOmttczp1cy13ZXN0LTI6NzA5NTg3ODM1MjQzOmtleS83MDVlZDY3MC1mNTdjLTQxYjUtOWY5Yi1lM2YyZGNjMTQ2ZTcAuAECAQB4CxqLTo9l4lqXuFjNim1xJM%2Bp%2F3TVP9xHS2BrU5DRRucB5TKoVd%2FBvRr%2FVzMw1LSa4QAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDMUbpAJEJgwTvzYUQQIBEIA76FrfVL8HjDcHaoUmVE1boRrlAG40LGKmHhDntzkPhMv7wMYXw8NDy3NP4z4%2BX9n0lfOt2xZlusPpcxQAB2F3cy1rbXMAS2Fybjphd3M6a21zOmV1LXdlc3QtMTo3MDk1ODc4MzUyNDM6a2V5LzQ2MzBjZTZiLTAwYzMtNGRlMi04NzdiLTYyN2UyMDYwZTVjYwC4AQICAHi9bVMAkme4qVQX1fQHo6ePw3H40A7cGfz7yrmSfBWMXgFVX6Fe%2F4faED75nJJ5TiG%2BAAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMP8uPmOq437A5DmkeAgEQgDsDzpMbo1bP0kK2FLV6cGHekSsVo6iFyJ8R3SD4LiPKtmW5Jsl%2FG%2FRuMg9kB32by7%2Ft8DPqQ5sI3DK1AgAHYXdzLWttcwBLYXJuOmF3czprbXM6dXMtZWFzdC0xOjcwOTU4NzgzNTI0MzprZXkvNmMxMjBiYTAtNGNkNS00OTg1LWI4MmUtNDBhMDQ5NTJjYzU3ALgBAgIAeDYASx0XCjkny4iLV6vz%2BKtEGSGT6kdt0QRpkn6D%2FlVEAddaiAbZqbObzWZdGxe0%2BbEAAAB%2BMHwGCSqGSIb3DQEHBqBvMG0CAQAwaAYJKoZIhvcNAQcBMB4GCWCGSAFlAwQBLjARBAwRg%2FW7%2FCrJgpcsshMCARCAO%2F00d3Csyv2kGUH%2FDKQtE83HPzW%2BwibGHwAiN1YL2nOc%2FwwK5Mr4Je1kk7r%2B6F2vWyozqsXN662DJgtFAgAAAAAMAAAQAAAAAAAAAAAAAAAAAEbrx85bkSK9GzFa40dJkyj%2F%2F%2F%2F%2FAAAAAQAAAAAAAAAAAAAAAQAAADKspSA%2Fgna4RrufBmfQpO%2BWkMYZB%2Ftzfnnguh%2BOlcVzU3264G5SiBcKHXj7hwkfxwm9aW3HhBfDrDHGkQscoJGTX7M%3D&product=jira).
 2. Choose your Jira site and click **Get app**. The app asks for read and write access to Jira work items and app storage, and for egress to `api.github.com` and the LLM host.
 
 ## 2. Create a project
@@ -31,7 +31,8 @@ Create a Scrum or Kanban software project with key `SEC`, or use any existing pr
 
 - **Gadget:** Dashboards → Create dashboard → Add gadget → **CodeSentinel Security Posture** → choose the project.
 - **Rovo:** open Rovo chat → agents → **CodeSentinel Security Analyst** → ask "What is the security posture of SEC?"
-- **MCP:** on the project page, generate an **MCP token** and copy the MCP URL. Run `npx @modelcontextprotocol/inspector`, choose Streamable HTTP, enter the URL, and add the header `Authorization: Bearer <token>`. See `docs/spec/mcp-tools.md`.
+- **Rovo MCP:** Rovo Studio → create an agent → add tools → **CodeSentinel MCP** (`get-security-posture`, `list-open-findings`).
+- **MCP web trigger:** on the project page, generate an **MCP token** and copy the MCP URL. Run `npx @modelcontextprotocol/inspector`, choose Streamable HTTP, enter the URL, and add the header `Authorization: Bearer <token>`. See `docs/spec/mcp-tools.md`.
 - **Suggest fix (optional):** tick **Allow LLM suggestions** on the project page. Open a CodeSentinel issue → **⋯ → Suggest fix**.
 
 ## Troubleshooting
