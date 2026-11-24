@@ -113,7 +113,9 @@ export async function runScanStep(repo, { store, jira, github, runId = null, clo
   // Scan now may have replaced this run while it was fetching; never publish a superseded run.
   const current = await store.getScanState(repo.repoUrl);
   if (current && current.runId !== state.runId) return { status: 'superseded' };
-  const result = await processReport(report, repo, { source: 'app', commit: state.commit, commitTime: state.commitTime ?? null, store, jira });
+  // A resumed run may have scanned a commit that is no longer the head; only the live head bypasses the stale check.
+  const headIsCurrent = (await github.resolveHead(owner, name)).commit === state.commit;
+  const result = await processReport(report, repo, { source: 'app', commit: state.commit, commitTime: state.commitTime ?? null, headIsCurrent, store, jira });
   if ((await store.getScanState(repo.repoUrl))?.runId === state.runId) await store.setScanState(repo.repoUrl, null);
   return { status: 'completed', result };
 }

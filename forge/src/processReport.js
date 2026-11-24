@@ -51,14 +51,15 @@ const withRepoFooter = (payload, repoUrl) => ({ ...payload, description: `${payl
 
 const isOlder = (commitTime, previous) => Boolean(commitTime && previous?.commitTime && Date.parse(commitTime) < Date.parse(previous.commitTime));
 
-export async function processReport(rawReport, repo, { source, commit = null, commitTime = null, store, jira, now = () => new Date().toISOString() }) {
+export async function processReport(rawReport, repo, { source, commit = null, commitTime = null,
+    headIsCurrent = false, store, jira, now = () => new Date().toISOString() }) {
   const report = redactSecretLines(rawReport);
   const { repoUrl, projectKey } = repo;
   const previousScan = await store.getLatestScan(projectKey);
   const sameRepoScan = previousScan?.repoUrl === repoUrl;
-  // A CI report for an older commit arriving late must not roll back state from a newer one. App scans
-  // always read the live branch head, so they are never stale and also reset the cutoff after a rollback.
-  if (source !== 'app' && sameRepoScan && isOlder(commitTime, previousScan)) {
+  // A report for an older commit arriving late must not roll back state from a newer one. An app scan
+  // whose commit is still the branch head at publish time is authoritative, which also covers rollbacks.
+  if (!(source === 'app' && headIsCurrent) && sameRepoScan && isOlder(commitTime, previousScan)) {
     return { created: 0, resolved: 0, unchanged: 0, errors: [], stale: true };
   }
 
@@ -81,9 +82,9 @@ export async function processReport(rawReport, repo, { source, commit = null, co
 
   for (const finding of diff.toCreate) {
     try {
-      // Issues carry a repo footer; legacy issues without one are adopted only if no other repo tracks them.
+      // The repo footer is editable, so an issue tracked by another repo's open record is never adopted.
       const found = await jira.findIssueByFingerprint(projectKey, finding.fingerprint, repoUrl);
-      const issue = found && (found.repoUrl || !foreignIssueKeys.has(found.issueKey))
+      const issue = found && !foreignIssueKeys.has(found.issueKey)
         ? found
         : await jira.createIssue(projectKey, withRepoFooter(buildIssuePayload(finding), repoUrl), repo.issueType ?? 'Bug');
       await store.setFingerprint(recordKey(projectKey, finding.fingerprint), {

@@ -31,9 +31,9 @@ processReport(report, repo, { source, commit })
 
 Guards (follow-up to the PR #19 review):
 
-- **Stale reports:** CI may send `X-Commit-Time` (ISO 8601, e.g. `git log -1 --format=%cI`); app scans use the branch head's committer date. A CI report whose commit time is older than the stored latest scan's is acknowledged (`200`, `"stale": true`) but not applied. An untimed report keeps the previous cutoff. App scans read the live head, so they are always applied and reset the cutoff (e.g. after a branch rollback).
+- **Stale reports:** CI may send `X-Commit-Time` (ISO 8601, e.g. `git log -1 --format=%cI`); app scans use the branch head's committer date. A CI report whose commit time is older than the stored latest scan's is acknowledged (`200`, `"stale": true`) but not applied. An untimed report keeps the previous cutoff. An app scan whose commit is still the branch head when it publishes is always applied and resets the cutoff (e.g. after a branch rollback); a resumed scan whose commit has since been superseded gets the normal stale check.
 - **Partial coverage:** nothing is resolved when `meta.hitFileLimit` is set (including when the skipped list was capped), and findings in a file listed in `skipped` (e.g. grown past 1 MB) stay open.
-- **Repo relinks:** new issues end with a `codesentinel-repo: <repoUrl>` footer. A JQL match is adopted only if its footer names this repo, or (legacy issues without a footer) if no other repo's open record tracks it.
+- **Repo relinks:** new issues end with a `codesentinel-repo: <repoUrl>` footer. A JQL match is adopted only if its footer names this repo (or it has no footer) and no other repo's open record tracks it. The footer is editable, so the stored record always wins.
 - **Issue type:** `createIssue` reads the project's issue types and uses the configured one (default `Bug`) when present, otherwise `Task`, otherwise the first standard type.
 - **Redaction:** every finding on a line with a SEC001 match gets the SEC001 excerpt with every quoted value masked, in Jira, the latest scan and app-scan checkpoints.
 
