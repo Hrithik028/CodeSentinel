@@ -303,8 +303,22 @@ test('an app scan after a branch rollback is applied and resets the cutoff', asy
   const jira = fakeJira();
   const report = fixture('scan-a.json');
   await processReport(report, REPO, { source: 'app', commitTime: '2026-11-20T10:00:00.000Z', store, jira });
-  const rolledBack = await processReport({ ...report, findings: [] }, REPO, { source: 'app', commitTime: '2026-11-18T10:00:00.000Z', store, jira });
+  const resumed = await processReport({ ...report, findings: [] }, REPO, { source: 'app', commitTime: '2026-11-18T10:00:00.000Z', store, jira });
+  assert.equal(resumed.stale, true, 'an app scan of a commit that is no longer the head is stale');
+  const rolledBack = await processReport({ ...report, findings: [] }, REPO, { source: 'app', commitTime: '2026-11-18T10:00:00.000Z', headIsCurrent: true, store, jira });
   assert.equal(rolledBack.stale, undefined);
   assert.ok(rolledBack.resolved > 0);
   assert.equal((await store.getLatestScan('SEC')).commitTime, '2026-11-18T10:00:00.000Z');
+});
+
+test('an editable repo footer cannot claim an issue another repo still tracks', async () => {
+  const store = await tempStore();
+  const report = fixture('scan-a.json');
+  const finding = report.findings.find((f) => f.severity === 'high');
+  await store.setFingerprint(recordKey('SEC', finding.fingerprint), { fingerprint: finding.fingerprint, repoUrl: 'https://github.com/old/repo', projectKey: 'SEC', issueKey: 'SEC-77', status: 'open' });
+  const jira = fakeJira({ existing: new Map([[finding.fingerprint, { issueId: '177', issueKey: 'SEC-77', repoUrl: REPO.repoUrl }]]) });
+
+  await processReport(report, REPO, { source: 'ci', store, jira });
+
+  assert.notEqual((await store.getFingerprint(recordKey('SEC', finding.fingerprint))).issueKey, 'SEC-77');
 });

@@ -3,8 +3,9 @@ import test from 'node:test';
 import { readFileSync, readdirSync } from 'node:fs';
 import { createGitHubClient, selectFiles, MAX_FILES, MAX_FILE_BYTES } from '../src/github.js';
 import { runScanStep } from '../src/scan.js';
+import { processReport } from '../src/processReport.js';
 import { scanDirectory } from '../src/shared/scanner.js';
-import { fakeGitHub, fakeJira, REPO, tempForgeLikeStore } from './helpers.js';
+import { fakeGitHub, fakeJira, fixture, REPO, tempForgeLikeStore } from './helpers.js';
 
 const sampleDir = new URL('../../samples/vulnerable-app/', import.meta.url);
 const sampleFiles = readdirSync(sampleDir).map((name) => ({ path: name, content: readFileSync(new URL(name, sampleDir), 'utf8') }));
@@ -129,4 +130,28 @@ test('app scans record the commit time used to order reports', async () => {
   const github = { ...fakeGitHub(sampleFiles), resolveHead: async () => ({ branch: 'main', commit: 'c0ffee', commitTime: '2026-11-20T00:00:00Z' }) };
   await runScanStep(REPO, { store, jira: fakeJira(), github });
   assert.equal((await store.getLatestScan('SEC')).commitTime, '2026-11-20T00:00:00Z');
+});
+
+test('an app scan whose commit is no longer the head cannot override a newer report', async () => {
+  for (const [moved, stale] of [[true, true], [false, undefined]]) {
+    const store = await tempForgeLikeStore();
+    await processReport({ ...fixture('scan-a.json'), findings: [] }, REPO, { source: 'ci', commitTime: '2026-11-21T00:00:00Z', store, jira: fakeJira() });
+    let calls = 0;
+    const github = { ...fakeGitHub(sampleFiles), resolveHead: async () => ({ branch: 'main', commit: moved && calls++ > 0 ? 'beef' : 'c0ffee', commitTime: '2026-11-20T00:00:00Z' }) };
+    const step = await runScanStep(REPO, { store, jira: fakeJira(), github });
+    assert.equal(step.result.stale, stale);
+  }
+});
+
+test('a run superseded while resolving the head is not published', async () => {
+  const store = await tempForgeLikeStore();
+  const jira = fakeJira();
+  let calls = 0;
+  const github = { ...fakeGitHub(sampleFiles), resolveHead: async () => {
+    if (calls++ > 0) await store.setScanState(REPO.repoUrl, { runId: 'newer-run' });
+    return { branch: 'main', commit: 'c0ffee', commitTime: '2026-11-20T00:00:00Z' };
+  } };
+  const step = await runScanStep(REPO, { store, jira, github });
+  assert.equal(step.status, 'superseded');
+  assert.equal(jira.created.length, 0);
 });
