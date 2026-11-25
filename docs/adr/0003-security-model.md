@@ -30,7 +30,7 @@
   - The PAT should be fine-grained, with read-only Contents access on one repo.
 - **Admin-only configuration:** project page resolvers check that the caller has `ADMINISTER_PROJECTS` before they save config or rotate tokens.
 - **LLM opt-in:** Suggest fix is off unless `llmOptIn` is set for the repo.
-  - The `codesentinel` label is not trusted: the issue must match a stored `fp:` record (same issue key, project and linked repo). Rule and excerpt come from app storage, not the editable issue text.
+  - The `codesentinel` label is not trusted: the issue must match a stored `fp:` record (same issue key, project and linked repo). Rule and excerpt come from app storage (the `fp:` record, falling back to the latest scan), not the editable issue text.
   - It sends only `ruleId`, title, remediation and the redacted excerpt.
   - The reply is posted as a comment prefixed `AI-generated suggestion (advisory only)`.
   - It never changes code or issue state.

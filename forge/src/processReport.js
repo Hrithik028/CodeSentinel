@@ -101,6 +101,7 @@ export async function processReport(rawReport, repo, { source, commit = null, co
         severity: finding.severity,
         file: finding.file,
         line: finding.line,
+        excerpt: capExcerpt(finding.excerpt),
         firstSeenAt: timestamp,
         lastSeenAt: timestamp,
         resolvedAt: null
@@ -133,7 +134,7 @@ export async function processReport(rawReport, repo, { source, commit = null, co
 
   for (const finding of diff.unchanged) {
     const record = openRecords.find((item) => item.fingerprint === finding.fingerprint);
-    await store.setFingerprint(recordKey(projectKey, finding.fingerprint), { ...record, line: finding.line, lastSeenAt: timestamp });
+    await store.setFingerprint(recordKey(projectKey, finding.fingerprint), { ...record, line: finding.line, excerpt: capExcerpt(finding.excerpt), lastSeenAt: timestamp });
   }
 
   const findings = (report.findings ?? []).map((finding) => storedFinding(finding, issueKeys.get(finding.fingerprint) ?? null));

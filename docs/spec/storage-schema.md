@@ -35,13 +35,14 @@ Forge-only (secret storage, `kvs.setSecret`/`getSecret`, encrypted, never sent t
   "severity": "critical",
   "file": "server.js",
   "line": 5,
+  "excerpt": "const apiKey = \"[REDACTED]\";",
   "firstSeenAt": "2026-11-20T12:00:00.000Z",
   "lastSeenAt": "2026-11-21T09:00:00.000Z",
   "resolvedAt": null
 }
 ```
 
-`status` is `open` or `resolved`. The set of previous fingerprints for a run is `allFingerprintRecords()` filtered by `repoUrl` and `status === 'open'`.
+`status` is `open` or `resolved`. `excerpt` is the redacted excerpt (≤240 chars) from the last scan that saw the finding; Suggest fix reads it, so it works even when the latest scan skipped the file or truncated its findings. The set of previous fingerprints for a run is `allFingerprintRecords()` filtered by `repoUrl` and `status === 'open'`.
 
 ### `config:repos`
 

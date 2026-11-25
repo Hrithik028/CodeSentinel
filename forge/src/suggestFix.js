@@ -83,7 +83,9 @@ export function createSuggestFix({ store, readIssue, canComment, addComment, llm
       throw new Error('Could not match this issue to a CodeSentinel finding. Run a scan and try again.');
     }
     const rule = RULES.find((item) => item.id === record.ruleId);
-    const excerpt = (await store.getLatestScan(issue.projectKey))?.findings?.find((item) => item.fingerprint === fingerprint)?.excerpt ?? null;
+    // The record keeps the excerpt even when the latest scan skipped the file or truncated its findings.
+    const excerpt = record.excerpt
+      ?? (await store.getLatestScan(issue.projectKey))?.findings?.find((item) => item.fingerprint === fingerprint)?.excerpt ?? null;
     const file = record.file;
     if (!rule || excerpt === null) throw new Error('Could not read the CodeSentinel finding from this issue.');
 
