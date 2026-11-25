@@ -322,3 +322,27 @@ test('an editable repo footer cannot claim an issue another repo still tracks', 
 
   assert.notEqual((await store.getFingerprint(recordKey('SEC', finding.fingerprint))).issueKey, 'SEC-77');
 });
+
+test('a footer-less issue whose record another repo overwrote is not adopted on a later relink', async () => {
+  const store = await tempStore();
+  const report = fixture('scan-a.json');
+  const finding = report.findings.find((f) => f.severity === 'high');
+  // A fork took over this project's record for the shared fingerprint; legacy SEC-1 (no footer) is still open.
+  await store.setFingerprint(recordKey('SEC', finding.fingerprint), { fingerprint: finding.fingerprint, repoUrl: 'https://github.com/fork/repo', projectKey: 'SEC', issueKey: 'SEC-9', status: 'open' });
+  const jira = fakeJira({ existing: new Map([[finding.fingerprint, { issueId: '101', issueKey: 'SEC-1' }]]) });
+
+  await processReport(report, REPO, { source: 'ci', store, jira });
+
+  assert.ok(!['SEC-1', 'SEC-9'].includes((await store.getFingerprint(recordKey('SEC', finding.fingerprint))).issueKey));
+});
+
+test('a footer-less issue is still adopted while the project has only tracked this repo', async () => {
+  const store = await tempStore();
+  const report = fixture('scan-a.json');
+  const finding = report.findings.find((f) => f.severity === 'high');
+  const jira = fakeJira({ existing: new Map([[finding.fingerprint, { issueId: '101', issueKey: 'SEC-1' }]]) });
+
+  await processReport(report, REPO, { source: 'ci', store, jira });
+
+  assert.equal((await store.getFingerprint(recordKey('SEC', finding.fingerprint))).issueKey, 'SEC-1');
+});

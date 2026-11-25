@@ -163,6 +163,20 @@ test('the LLM prompt uses the stored redacted excerpt, never the raw secret', as
   assert.ok(prompt.includes(secret.ruleId));
 });
 
+test('suggest fix works for an open issue whose file the latest scan skipped', async () => {
+  const report = fixture('scan-a.json');
+  const finding = report.findings.find((f) => f.severity === 'high');
+  const { store, jira } = await seeded({ llmOptIn: true });
+  const key = await issueKeyFor(store, finding);
+  const others = report.findings.filter((f) => f.file !== finding.file);
+  await processReport({ ...report, findings: others, skipped: [{ path: finding.file }] }, REPO, { source: 'ci', store, jira });
+  assert.equal((await store.getFingerprint(recordKey('SEC', finding.fingerprint))).status, 'open');
+
+  let prompt = '';
+  await createSuggestFix({ canComment: async () => true, store, readIssue: async () => issueFrom(finding, 'SEC', key), addComment: async () => {}, llm: async (m) => { prompt = JSON.stringify(m); return 'ok'; } })(key);
+  assert.ok(prompt.includes(finding.ruleId));
+});
+
 test('openIssues still counts issues whose Done transition failed', async () => {
   const { store } = await seeded();
   const before = (await getSecurityPosture(store, {})).projects[0].openIssues;

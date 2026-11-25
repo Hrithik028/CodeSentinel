@@ -31,10 +31,10 @@ export function redactSecretLines(report) {
 
 export const recordKey = (projectKey, fingerprint) => `${projectKey}:${fingerprint}`;
 
+const capExcerpt = (excerpt) => (typeof excerpt === 'string' ? excerpt.slice(0, MAX_STORED_EXCERPT) : excerpt);
+
 const storedFinding = ({ fingerprint, ruleId, title, severity, category, message, file, line, column, excerpt }, issueKey) => ({
-  fingerprint, ruleId, title, severity, category, message, file, line, column,
-  excerpt: typeof excerpt === 'string' ? excerpt.slice(0, MAX_STORED_EXCERPT) : excerpt,
-  issueKey
+  fingerprint, ruleId, title, severity, category, message, file, line, column, excerpt: capExcerpt(excerpt), issueKey
 });
 
 export function fitLatestScan(scan, findings, maxBytes = MAX_STORED_SCAN_BYTES) {
@@ -75,6 +75,9 @@ export async function processReport(rawReport, repo, { source, commit = null, co
   const foreignIssueKeys = new Set(allRecords
     .filter((record) => record.projectKey === projectKey && record.repoUrl !== repoUrl && record.status === 'open')
     .map((record) => record.issueKey));
+  // Records are keyed per project, so another repo may have overwritten the record of a footer-less
+  // (pre-footer) issue; such an issue is only adopted while this project has never tracked another repo.
+  const otherRepoTracked = allRecords.some((record) => record.projectKey === projectKey && record.repoUrl !== repoUrl);
   const openRecords = records.filter((record) => record.status === 'open');
   const diff = diffReports(openRecords, report);
   const result = { created: 0, resolved: 0, unchanged: diff.unchanged.length, errors: [] };
@@ -84,7 +87,7 @@ export async function processReport(rawReport, repo, { source, commit = null, co
     try {
       // The repo footer is editable, so an issue tracked by another repo's open record is never adopted.
       const found = await jira.findIssueByFingerprint(projectKey, finding.fingerprint, repoUrl);
-      const issue = found && !foreignIssueKeys.has(found.issueKey)
+      const issue = found && !foreignIssueKeys.has(found.issueKey) && (found.repoUrl || !otherRepoTracked)
         ? found
         : await jira.createIssue(projectKey, withRepoFooter(buildIssuePayload(finding), repoUrl), repo.issueType ?? 'Bug');
       await store.setFingerprint(recordKey(projectKey, finding.fingerprint), {
@@ -98,6 +101,7 @@ export async function processReport(rawReport, repo, { source, commit = null, co
         severity: finding.severity,
         file: finding.file,
         line: finding.line,
+        excerpt: capExcerpt(finding.excerpt),
         firstSeenAt: timestamp,
         lastSeenAt: timestamp,
         resolvedAt: null
@@ -130,7 +134,7 @@ export async function processReport(rawReport, repo, { source, commit = null, co
 
   for (const finding of diff.unchanged) {
     const record = openRecords.find((item) => item.fingerprint === finding.fingerprint);
-    await store.setFingerprint(recordKey(projectKey, finding.fingerprint), { ...record, line: finding.line, lastSeenAt: timestamp });
+    await store.setFingerprint(recordKey(projectKey, finding.fingerprint), { ...record, line: finding.line, excerpt: capExcerpt(finding.excerpt), lastSeenAt: timestamp });
   }
 
   const findings = (report.findings ?? []).map((finding) => storedFinding(finding, issueKeys.get(finding.fingerprint) ?? null));
